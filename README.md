@@ -1,0 +1,205 @@
+# NGR GLOBAL - Agenda de Consultores
+
+Sistema web para gerenciamento de agenda de consultores de TI da NGR Global.
+
+## 🚀 Stack Tecnológica
+
+| Camada | Tecnologia |
+|--------|------------|
+| Frontend | React 18 + TypeScript + Vite |
+| UI/Estilo | TailwindCSS |
+| Backend | Node.js + Express + TypeScript |
+| Banco de Dados | MongoDB + Mongoose |
+| Autenticação | JWT + Passport.js |
+
+## 📋 Funcionalidades
+
+### Perfis de Usuário
+
+| Perfil | Descrição |
+|--------|-----------|
+| **Administrador** | Acesso total ao sistema |
+| **Usuário** | Acesso à agenda, pode ver agenda de todos os consultores |
+
+### Funções dos Consultores
+- Gerente
+- Import
+- Export
+- Câmbio
+- Drawback
+- Recof
+- Suporte
+
+*Um usuário pode ter múltiplas funções.*
+
+### Funcionalidades do Sistema
+- ✅ Login com troca obrigatória de senha no primeiro acesso
+- ✅ CRUD de Usuários/Consultores
+- ✅ CRUD de Projetos
+- ✅ CRUD de Funções
+- ✅ CRUD de Status de Alocação
+- ✅ Visualização da agenda (grid tipo planilha)
+- ✅ Criar/editar/excluir alocações
+- ✅ Alocação em massa (múltiplos dias/períodos)
+- ✅ Filtro de consultores
+- ✅ Visualização multi-semana (1-4 semanas)
+- ✅ Detecção automática de conflitos
+- ✅ Rastreamento de quem criou cada alocação
+
+## 🎨 Layout
+
+Interface com identidade visual NGR Global:
+- Fundo branco com paleta de cores azul
+- Sidebar com logo NGR Global
+- Grid de agenda mostrando todos os slots de horário
+
+### Status de Alocação e Cores
+
+| Status | Cor |
+|--------|-----|
+| Confirmado Presencial | Amarelo |
+| Confirmado Remoto | Azul |
+| À Confirmar | Verde |
+| Livre | Verde Claro |
+| Bloqueado | Cinza |
+| Conflito | Vermelho |
+| Ponte | Cinza Claro |
+| Feriado | Cinza Médio |
+| Final de Semana | Cinza Bem Claro |
+
+### Períodos do Dia
+
+| Período | Horários |
+|---------|----------|
+| Manhã | 08:00-10:00, 10:00-12:00 |
+| Tarde | 13:00-15:00, 15:00-17:00 |
+| Noite | 18:00-20:00, 20:00-22:00 |
+
+## 🛠️ Instalação
+
+### Pré-requisitos
+- Node.js 18+
+- MongoDB (local ou MongoDB Atlas)
+- npm ou yarn
+
+### 1. Configure as variáveis de ambiente
+```bash
+# Copie o arquivo de exemplo
+cp server/.env.example server/.env
+
+# Edite o arquivo .env com suas configurações
+# - MONGODB_URI: sua string de conexão MongoDB
+# - JWT_SECRET: uma chave secreta segura
+```
+
+### 2. Instale as dependências
+```bash
+npm install
+```
+
+### 3. Inicie o MongoDB
+Se estiver usando MongoDB local:
+```bash
+mongod
+```
+
+### 4. Execute o seed (dados iniciais)
+```bash
+cd server
+npx tsx src/scripts/seed.ts
+```
+
+### 5. Inicie o sistema
+```bash
+# Na raiz do projeto
+npm run dev
+```
+
+O sistema estará disponível em:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3001
+
+## 🔑 Credenciais
+
+Após executar o seed:
+
+| Perfil | Email | Senha |
+|--------|-------|-------|
+| Administrador | admin@ngrglobal.com.br | Ngr@123 |
+| Consultor | [email]@ngrglobal.com.br | Ngr@123 |
+
+**⚠️ Importante:** Consultores precisarão trocar a senha no primeiro login.
+
+## 📁 Estrutura do Projeto
+
+```
+consultant-scheduler/
+├── client/                 # Frontend React
+│   ├── src/
+│   │   ├── components/     # Componentes reutilizáveis
+│   │   │   ├── Grid/       # Componentes da agenda
+│   │   │   └── Layout/     # Layout principal
+│   │   ├── pages/          # Páginas da aplicação
+│   │   ├── services/       # Chamadas à API
+│   │   ├── store/          # Estado global (Zustand)
+│   │   └── types/          # Tipos TypeScript
+│   └── ...
+├── server/                 # Backend Node.js
+│   ├── src/
+│   │   ├── config/         # Configurações (DB, Passport)
+│   │   ├── controllers/    # Controladores
+│   │   ├── middleware/     # Middlewares
+│   │   ├── models/         # Modelos MongoDB
+│   │   ├── routes/         # Rotas da API
+│   │   ├── scripts/        # Scripts (seed)
+│   │   └── types/          # Tipos TypeScript
+│   └── ...
+└── package.json            # Workspace root
+```
+
+## 🔌 API Endpoints
+
+### Autenticação
+- `POST /api/auth/login` - Login
+- `POST /api/auth/register` - Registro
+- `GET /api/auth/profile` - Perfil do usuário
+- `PUT /api/auth/password` - Alterar senha
+- `PUT /api/auth/force-change-password` - Troca obrigatória de senha
+
+### Usuários
+- `GET /api/users` - Listar todos
+- `GET /api/users/:id` - Buscar por ID
+- `POST /api/users` - Criar (admin)
+- `PUT /api/users/:id` - Atualizar (admin)
+- `DELETE /api/users/:id` - Desativar (admin)
+
+### Projetos
+- `GET /api/projects` - Listar todos
+- `GET /api/projects/:id` - Buscar por ID
+- `POST /api/projects` - Criar (admin)
+- `PUT /api/projects/:id` - Atualizar (admin)
+- `DELETE /api/projects/:id` - Desativar (admin)
+
+### Alocações
+- `GET /api/allocations` - Listar com filtros
+- `GET /api/allocations/agenda` - Dados para a agenda
+- `POST /api/allocations` - Criar (admin)
+- `POST /api/allocations/bulk` - Criar em massa (admin)
+- `PUT /api/allocations/:id` - Atualizar (admin)
+- `DELETE /api/allocations/:id` - Remover (admin)
+
+### Configurações de Status
+- `GET /api/status-config` - Listar status
+- `POST /api/status-config` - Criar (admin)
+- `PUT /api/status-config/:id` - Atualizar (admin)
+- `DELETE /api/status-config/:id` - Remover (admin)
+
+### Configurações de Funções
+- `GET /api/function-config` - Listar funções
+- `POST /api/function-config` - Criar (admin)
+- `PUT /api/function-config/:id` - Atualizar (admin)
+- `DELETE /api/function-config/:id` - Remover (admin)
+
+## 📄 Licença
+
+Este projeto é propriedade da NGR Global.

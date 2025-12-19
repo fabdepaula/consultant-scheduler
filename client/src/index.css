@@ -1,0 +1,172 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #e6f0fa;
+  --ngr-primary: #003366;
+  --ngr-secondary: #0066CC;
+  --ngr-accent: #0099FF;
+  --ngr-light: #E6F0FA;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --border-color: #e2e8f0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ngr-secondary);
+}
+
+/* Grid cell styles */
+.grid-cell {
+  @apply border border-slate-200 min-h-[40px] text-xs flex items-center justify-center transition-all duration-150;
+}
+
+.grid-cell:hover {
+  @apply border-ngr-secondary shadow-sm;
+}
+
+.grid-cell-clickable {
+  @apply cursor-pointer;
+}
+
+.grid-cell-clickable:hover {
+  filter: brightness(0.95);
+}
+
+/* Status colors with text contrast */
+.status-cell {
+  @apply font-medium text-slate-900;
+}
+
+/* Allocation modal */
+.modal-overlay {
+  @apply fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50;
+}
+
+.modal-content {
+  @apply bg-white border border-slate-200 rounded-xl shadow-2xl w-full mx-4 p-6
+         max-h-[90vh] overflow-hidden flex flex-col;
+}
+
+/* Responsive modal widths */
+@media (max-width: 640px) {
+  .modal-content {
+    @apply mx-2 p-4 max-h-[95vh];
+  }
+}
+
+/* Table styles matching Excel */
+.excel-table {
+  @apply border-collapse text-sm;
+}
+
+.excel-table th,
+.excel-table td {
+  @apply border border-slate-300 px-2 py-1;
+}
+
+.excel-table th {
+  @apply bg-ngr-primary font-semibold text-white;
+}
+
+/* Expand/collapse animation */
+.period-expand {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+/* Form inputs - tema claro */
+.input-field {
+  @apply w-full bg-white border border-slate-300 rounded-lg px-4 py-2 text-slate-900 
+         focus:outline-none focus:border-ngr-secondary focus:ring-2 focus:ring-ngr-secondary/20
+         placeholder:text-slate-400;
+}
+
+.select-field {
+  @apply w-full bg-white border border-slate-300 rounded-lg px-4 py-2 text-slate-900 
+         focus:outline-none focus:border-ngr-secondary focus:ring-2 focus:ring-ngr-secondary/20
+         appearance-none cursor-pointer;
+}
+
+.btn-primary {
+  @apply bg-ngr-secondary hover:bg-ngr-primary text-white font-medium px-4 py-2 rounded-lg 
+         transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-4 py-2 rounded-lg 
+         transition-colors duration-200 border border-slate-300;
+}
+
+.btn-danger {
+  @apply bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg 
+         transition-colors duration-200;
+}
+
+/* Legend item */
+.legend-item {
+  @apply flex items-center gap-2 text-xs;
+}
+
+.legend-color {
+  @apply w-4 h-4 rounded border border-slate-300;
+}
+
+/* Status background classes */
+.bg-status-confirmado-presencial { background-color: #FFFF00; }
+.bg-status-confirmado-remoto { background-color: #4472C4; color: white; }
+.bg-status-a-confirmar { background-color: #70AD47; color: white; }
+.bg-status-livre { background-color: #C6EFCE; }
+.bg-status-bloqueado { background-color: #808080; color: white; }
+.bg-status-conflito { background-color: #FF0000; color: white; }
+.bg-status-ponte { background-color: #BFBFBF; }
+.bg-status-feriado { background-color: #A6A6A6; color: white; }
+.bg-status-fim-semana { background-color: #D9D9D9; }
+
+/* Card styles */
+.card {
+  @apply bg-white rounded-xl border border-slate-200 shadow-sm;
+}
+
+/* Sidebar NGR */
+.sidebar-ngr {
+  @apply bg-ngr-primary text-white;
+}
