@@ -23,6 +23,7 @@ export interface FieldMapping {
   sourceField: string;
   targetField: string;
   transformations?: Transformation[];
+  updateBehavior?: 'update' | 'keep'; // 'update' = sempre atualiza, 'keep' = sempre mantém
 }
 
 export interface SchedulePreset {

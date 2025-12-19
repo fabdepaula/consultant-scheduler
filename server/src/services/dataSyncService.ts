@@ -567,7 +567,27 @@ export const executeDataSync = async (configId: string, userId?: string) => {
             console.log(`[DataSync] ⚠️ Usuário ${sourceKey}: senha não fornecida, mantendo senha existente`);
           }
           
-          Object.assign(existing, payload);
+          // Filtrar campos baseado no updateBehavior de cada mapeamento
+          const fieldsToUpdate: Record<string, any> = {};
+          config.mappings.forEach((mapping) => {
+            const behavior = mapping.updateBehavior || 'update'; // Padrão: sempre atualiza
+            const targetField = mapping.targetField;
+            const newValue = payload[targetField];
+            
+            if (behavior === 'update') {
+              // Sempre atualiza
+              fieldsToUpdate[targetField] = newValue;
+            } else if (behavior === 'keep') {
+              // Mantém o valor existente (não adiciona ao fieldsToUpdate)
+              // O campo não será atualizado
+              if (i < 3) {
+                console.log(`[DataSync] 🔒 Campo ${targetField}: comportamento 'keep' - mantendo valor existente`);
+              }
+            }
+          });
+          
+          // Aplicar apenas os campos que devem ser atualizados
+          Object.assign(existing, fieldsToUpdate);
           await existing.save();
           updated += 1;
         } else {

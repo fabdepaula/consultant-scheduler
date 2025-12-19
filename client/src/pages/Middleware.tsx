@@ -37,6 +37,7 @@ interface MappingRow {
   transforms: TransformationType[];
   defaultValue?: string;
   mapLines?: string; // texto para mapValue (from=to por linha)
+  updateBehavior?: 'update' | 'keep'; // 'update' = sempre atualiza, 'keep' = sempre mantém
 }
 
 interface ExecutionError {
@@ -76,6 +77,7 @@ interface DataSyncConfig {
       type: TransformationType;
       options?: any;
     }[];
+    updateBehavior?: 'update' | 'keep'; // 'update' = sempre atualiza, 'keep' = sempre mantém
   }[];
   schedule: {
     mode: ScheduleMode;
@@ -201,7 +203,7 @@ export default function Middleware() {
     setEditingId(null);
     setFormOpen(false);
     setSourceFields([]);
-    setMappingsUI([{ sourceField: '', targetField: '', transforms: [] }]);
+    setMappingsUI([{ sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' }]);
     setError(''); // Limpar erro ao fechar/resetar
   };
 
@@ -224,6 +226,7 @@ export default function Middleware() {
         transforms,
         defaultValue,
         mapLines,
+        updateBehavior: m.updateBehavior || 'update', // Padrão: sempre atualiza
       };
     });
 
@@ -238,7 +241,7 @@ export default function Middleware() {
     setFormOpen(true);
 
     // Guardar versões auxiliares no estado separado (mappingsUI)
-    const mappingsUIToSet = mappings.length ? mappings : [{ sourceField: '', targetField: '', transforms: [] }];
+    const mappingsUIToSet = mappings.length ? mappings : [{ sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' }];
     console.log('[Middleware] handleEdit - setando mappingsUI com:', JSON.stringify(mappingsUIToSet, null, 2));
     setMappingsUI(mappingsUIToSet);
     
@@ -249,7 +252,7 @@ export default function Middleware() {
   };
 
   const [mappingsUI, setMappingsUI] = useState<MappingRow[]>([
-    { sourceField: '', targetField: '', transforms: [] },
+    { sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' },
   ]);
   
   // Estado para controlar se os logs estão expandidos (por config)
@@ -266,7 +269,7 @@ export default function Middleware() {
 
   const addMappingRow = () => {
     setMappingsUI((prev) => {
-      const newMappings = [...prev, { sourceField: '', targetField: '', transforms: [] }];
+      const newMappings = [...prev, { sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' }];
       console.log('[Middleware] addMappingRow - novos mappings:', newMappings.length);
       return newMappings;
     });
@@ -275,7 +278,7 @@ export default function Middleware() {
   const removeMappingRow = (index: number) => {
     setMappingsUI((prev) => {
       const updated = prev.filter((_, i) => i !== index);
-      const result = updated.length ? updated : [{ sourceField: '', targetField: '', transforms: [] }];
+      const result = updated.length ? updated : [{ sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' }];
       console.log('[Middleware] removeMappingRow - mappings após remoção:', result.length);
       return result;
     });
@@ -331,6 +334,7 @@ export default function Middleware() {
         sourceField: m.sourceField,
         targetField: m.targetField,
         transformations,
+        updateBehavior: m.updateBehavior || 'update', // Padrão: sempre atualiza
       };
     });
   };
@@ -1021,7 +1025,7 @@ export default function Middleware() {
                 <div className="space-y-3">
                   {mappingsUI.map((m, idx) => (
                     <div key={idx} className="p-3 border border-slate-200 rounded-lg bg-slate-50 space-y-2">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                         <div>
                           <label className="text-xs font-medium text-slate-700">Campo origem</label>
                           <select
@@ -1049,6 +1053,20 @@ export default function Middleware() {
                               <option key={field} value={field}>{field}</option>
                             ))}
                           </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-slate-700">Se registro existir</label>
+                          <select
+                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            value={m.updateBehavior || 'update'}
+                            onChange={(e) => updateMappingField(idx, 'updateBehavior', e.target.value as 'update' | 'keep')}
+                          >
+                            <option value="update">Atualiza</option>
+                            <option value="keep">Mantém</option>
+                          </select>
+                          <p className="text-[10px] text-slate-500 mt-0.5">
+                            {m.updateBehavior === 'keep' ? 'Preserva valor existente' : 'Sobrescreve valor existente'}
+                          </p>
                         </div>
                         <div className="flex items-end justify-end">
                           <button
