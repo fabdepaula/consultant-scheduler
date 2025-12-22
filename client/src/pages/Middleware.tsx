@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { middlewareAPI, externalDataAPI } from '../services/api';
-import { useAuthStore } from '../store/authStore';
 import {
   Database,
   RefreshCw,
@@ -202,7 +201,7 @@ export default function Middleware() {
     setEditingId(null);
     setFormOpen(false);
     setSourceFields([]);
-    setMappingsUI([{ sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' }]);
+    setMappingsUI([{ sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' as const }]);
     setError(''); // Limpar erro ao fechar/resetar
   };
 
@@ -240,7 +239,7 @@ export default function Middleware() {
     setFormOpen(true);
 
     // Guardar versões auxiliares no estado separado (mappingsUI)
-    const mappingsUIToSet = mappings.length ? mappings : [{ sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' }];
+    const mappingsUIToSet: MappingRow[] = mappings.length ? mappings : [{ sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' as const }];
     console.log('[Middleware] handleEdit - setando mappingsUI com:', JSON.stringify(mappingsUIToSet, null, 2));
     setMappingsUI(mappingsUIToSet);
     
@@ -251,7 +250,7 @@ export default function Middleware() {
   };
 
   const [mappingsUI, setMappingsUI] = useState<MappingRow[]>([
-    { sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' },
+    { sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' as const },
   ]);
   
   // Estado para controlar se os logs estão expandidos (por config)
@@ -268,7 +267,7 @@ export default function Middleware() {
 
   const addMappingRow = () => {
     setMappingsUI((prev) => {
-      const newMappings = [...prev, { sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' }];
+      const newMappings: MappingRow[] = [...prev, { sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' as const }];
       console.log('[Middleware] addMappingRow - novos mappings:', newMappings.length);
       return newMappings;
     });
@@ -277,7 +276,7 @@ export default function Middleware() {
   const removeMappingRow = (index: number) => {
     setMappingsUI((prev) => {
       const updated = prev.filter((_, i) => i !== index);
-      const result = updated.length ? updated : [{ sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' }];
+      const result: MappingRow[] = updated.length ? updated : [{ sourceField: '', targetField: '', transforms: [], updateBehavior: 'update' as const }];
       console.log('[Middleware] removeMappingRow - mappings após remoção:', result.length);
       return result;
     });
@@ -496,7 +495,7 @@ export default function Middleware() {
       }
       
       // Adicionar informações de debug em desenvolvimento
-      if (process.env.NODE_ENV === 'development') {
+      if (import.meta.env.DEV) {
         finalMessage += `\n\n[Debug] Status: ${err.response?.status || 'N/A'}`;
         if (err.response?.data) {
           finalMessage += `\n[Debug] Response: ${JSON.stringify(err.response.data, null, 2)}`;

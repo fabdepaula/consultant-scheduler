@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useMemo } from 'react';
 import { useAgendaStore } from '../../store/agendaStore';
-import { Allocation, Project, User, STATUS_LABELS, TIME_SLOT_LABELS, PERIOD_LABELS, StatusConfig } from '../../types';
+import { Allocation, Project, User, STATUS_LABELS, TIME_SLOT_LABELS, PERIOD_LABELS, StatusConfig, AllocationStatus } from '../../types';
 
 interface Props {
   allocation: Allocation;
@@ -31,7 +31,7 @@ export default function CellTooltip({ allocation, x, y }: Props) {
     return {
       backgroundColor: '#CCCCCC',
       color: '#000000',
-      label: (STATUS_LABELS[allocation.status as AllocationStatus] || allocation.status) as string
+      label: (allocation.status in STATUS_LABELS ? STATUS_LABELS[allocation.status as AllocationStatus] : allocation.status) as string
     };
   }, [statusConfigs, allocation.status]);
 
