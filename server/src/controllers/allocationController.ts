@@ -153,7 +153,7 @@ export const createAllocation = async (req: Request, res: Response, next: NextFu
       status: finalStatus,
       artiaActivity,
       notes,
-      createdBy: req.user?._id,
+      createdBy: req.user!._id,
       history: [{
         action: 'created',
         changedBy: req.user?._id,
@@ -175,7 +175,7 @@ export const createAllocation = async (req: Request, res: Response, next: NextFu
             field: 'status',
             oldValue: existing.status,
             newValue: 'conflito',
-            changedBy: req.user?._id,
+            changedBy: req.user!._id,
             changedAt: new Date(),
             description: 'Status alterado para CONFLITO automaticamente (nova alocação no mesmo slot)',
           });
@@ -220,10 +220,10 @@ export const createBulkAllocations = async (req: Request, res: Response, next: N
         const allocation = await Allocation.create({
           ...alloc,
           date: new Date(alloc.date),
-          createdBy: req.user?._id,
+          createdBy: req.user!._id,
           history: [{
             action: 'created',
-            changedBy: req.user?._id,
+            changedBy: req.user!._id,
             changedAt: new Date(),
             description: 'Alocação criada em massa',
           }],
@@ -322,7 +322,7 @@ export const updateAllocation = async (req: Request, res: Response, next: NextFu
             field: 'projectId',
             oldValue: allocation.projectId,
             newValue: null,
-            changedBy: req.user?._id,
+            changedBy: req.user!._id,
             changedAt: new Date(),
             description: 'Projeto removido automaticamente (status não requer projeto)',
           });
@@ -402,7 +402,7 @@ export const addAttachment = async (req: Request, res: Response, next: NextFunct
       mimetype: file.mimetype,
       size: file.size,
       path: file.path,
-      uploadedBy: req.user?._id,
+      uploadedBy: req.user!._id,
       uploadedAt: new Date(),
     };
 
@@ -637,7 +637,7 @@ export const copyAllocations = async (req: Request, res: Response, next: NextFun
         status: alloc.status,
         artiaActivity: alloc.artiaActivity,
         notes: alloc.notes,
-        createdBy: req.user?._id,
+        createdBy: req.user!._id,
         history: [{
           action: 'created',
           changedBy: req.user?._id,

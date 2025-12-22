@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 
-interface AppError extends Error {
+interface IAppError extends Error {
   statusCode?: number;
   status?: string;
   isOperational?: boolean;
 }
 
 export const errorHandler = (
-  err: AppError,
+  err: IAppError | AppError,
   req: Request,
   res: Response,
   next: NextFunction

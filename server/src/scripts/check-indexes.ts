@@ -11,6 +11,9 @@ async function checkIndexes() {
     console.log('📦 Connected to MongoDB');
 
     const db = mongoose.connection.db;
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
     
     // Listar todas as coleções
     const collections = await db.listCollections().toArray();

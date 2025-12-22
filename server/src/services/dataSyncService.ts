@@ -178,6 +178,7 @@ export const executeDataSync = async (configId: string, userId?: string) => {
   let failed = 0;
   let message: string | undefined;
   const errorMap = new Map<string, ErrorInfo>();
+  let data: any[] = [];
 
   try {
     // Validação de segurança do filtro (será feita novamente em buildQuery, mas fazemos aqui para logar)
@@ -200,7 +201,7 @@ export const executeDataSync = async (configId: string, userId?: string) => {
     console.log(`[DataSync] Query executada: ${query}`);
     
     let rows: any;
-    let data: any[] = [];
+    data = [];
     let totalRecords = 0;
     
     try {
@@ -354,7 +355,7 @@ export const executeDataSync = async (configId: string, userId?: string) => {
       console.log(`[DataSync] ⚠️ BANCO VAZIO - Todos os registros devem ser INSERIDOS, não atualizados!`);
     } else {
       // Verificar alguns registros existentes para debug
-      const sampleRecords = await Model.find({}).limit(3).select(config.targetKeyField).lean();
+      const sampleRecords = await (Model as any).find({}).limit(3).select(config.targetKeyField).lean();
       console.log(`[DataSync] Exemplos de chaves existentes:`, sampleRecords.map((r: any) => ({
         [config.targetKeyField]: r[config.targetKeyField],
         tipo: typeof r[config.targetKeyField]
@@ -495,7 +496,7 @@ export const executeDataSync = async (configId: string, userId?: string) => {
             console.log(`  - existingCount inicial: ${existingCount}, currentCount: ${currentCount}`);
           }
           
-          existing = await Model.findOne(query);
+          existing = await (Model as any).findOne(query);
           
           if (i < 3) {
             console.log(`  - Encontrado:`, existing ? 'SIM ⚠️' : 'NÃO ✅');

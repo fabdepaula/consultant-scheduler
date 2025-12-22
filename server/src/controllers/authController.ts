@@ -14,7 +14,7 @@ const generateToken = (user: any): string => {
     profile: user.profile,
   };
   
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as string | number });
 };
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {

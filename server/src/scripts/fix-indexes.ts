@@ -11,6 +11,9 @@ async function fixIndexes() {
     console.log('📦 Connected to MongoDB');
 
     const db = mongoose.connection.db;
+    if (!db) {
+      throw new Error('Database connection not available');
+    }
     
     // Remover índice único problemático
     try {
