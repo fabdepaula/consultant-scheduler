@@ -129,11 +129,12 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
     period: Period,
     allocations: Allocation[]
   ) => {
-    if (!isAdmin) return;
+    // Permitir que todos os usuários abram o modal (consultores podem visualizar)
+    // A edição será bloqueada no modal para não-admins
     
-    // Se há apenas 1 alocação, abre para edição
+    // Se há apenas 1 alocação, abre para edição/visualização
     // Se há múltiplas (conflito), passa undefined para mostrar seletor
-    // Se não há nenhuma, abre para criar nova
+    // Se não há nenhuma, abre para criar nova (apenas admins podem criar)
     const singleAllocation = allocations.length === 1 ? allocations[0] : undefined;
     
     setSelectedCell({ 
@@ -487,7 +488,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                             border border-slate-300 text-center align-middle
                             h-[26px] min-h-[26px] max-h-[26px]
                             relative
-                            ${isAdmin ? 'cursor-pointer hover:opacity-80' : ''}
+                            cursor-pointer hover:opacity-80
                             ${hasConflict ? 'animate-pulse' : ''}
                           `}
                           style={{
@@ -523,6 +524,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
           period={selectedCell.period}
           allocation={selectedCell.allocation}
           existingAllocations={selectedCell.existingAllocations}
+          isAdmin={isAdmin}
           onClose={() => {
             setModalOpen(false);
             setSelectedCell(null);

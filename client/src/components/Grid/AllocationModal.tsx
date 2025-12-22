@@ -29,6 +29,7 @@ interface Props {
   period?: Period;
   allocation?: Allocation;
   existingAllocations?: Allocation[];
+  isAdmin?: boolean; // Se false, modal será somente leitura
   onClose: () => void;
 }
 
@@ -39,6 +40,7 @@ export default function AllocationModal({
   period: initialPeriod,
   allocation,
   existingAllocations = [],
+  isAdmin = true, // Padrão: admin (compatibilidade)
   onClose
 }: Props) {
   const { projects, createAllocation, updateAllocation, deleteAllocation, statusConfigs, refreshData } = useAgendaStore();
@@ -178,6 +180,13 @@ export default function AllocationModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Bloquear submissão se não for admin
+    if (!isAdmin) {
+      console.warn('Tentativa de salvar alocação por usuário não-admin bloqueada');
+      return;
+    }
+    
     setIsSubmitting(true);
 
     try {
@@ -257,6 +266,10 @@ export default function AllocationModal({
   };
 
   const handleDelete = async () => {
+    if (!isAdmin) {
+      console.warn('Tentativa de remover alocação por usuário não-admin bloqueada');
+      return;
+    }
     if (!effectiveAllocation || !confirm('Tem certeza que deseja remover esta alocação?')) return;
     
     setIsSubmitting(true);
@@ -375,6 +388,10 @@ export default function AllocationModal({
 
   // Função para criar nova alocação (quando já há conflito)
   const handleCreateNew = () => {
+    if (!isAdmin) {
+      console.warn('Tentativa de criar nova alocação por usuário não-admin bloqueada');
+      return;
+    }
     setSelectedAllocation(null);
     setShowSelector(false);
     setSelectedManagerFilter(''); // Limpar filtro de gerente
@@ -394,7 +411,11 @@ export default function AllocationModal({
         {/* Header - Fixo */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-200 flex-shrink-0">
           <h2 className="text-lg sm:text-xl font-bold text-slate-800">
-            {showSelector ? 'Alocações em Conflito' : effectiveAllocation ? 'Editar Alocação' : 'Nova Alocação'}
+            {showSelector 
+              ? 'Alocações em Conflito' 
+              : effectiveAllocation 
+                ? (isAdmin ? 'Editar Alocação' : 'Visualizar Alocação')
+                : 'Nova Alocação'}
           </h2>
           <button 
             onClick={handleClose}
@@ -502,12 +523,18 @@ export default function AllocationModal({
 
             <div className="flex gap-3 pt-4 border-t border-slate-200">
               <button onClick={handleClose} className="btn-secondary flex-1">
-                Cancelar
+                Fechar
               </button>
-              <button onClick={handleCreateNew} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                <Plus className="w-4 h-4" />
-                Nova Alocação
-              </button>
+              {isAdmin ? (
+                <button onClick={handleCreateNew} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Nova Alocação
+                </button>
+              ) : (
+                <div className="flex-1 text-sm text-slate-500 italic text-center py-2">
+                  Apenas administradores podem criar novas alocações
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -580,12 +607,12 @@ export default function AllocationModal({
                         key={p}
                         type="button"
                         onClick={() => togglePeriod(p)}
-                        disabled={!!effectiveAllocation} // Desabilita se estiver editando
+                        disabled={!!effectiveAllocation || !isAdmin} // Desabilita se estiver editando ou não for admin
                         className={`py-2 px-3 rounded-lg text-sm font-medium transition-all border flex items-center justify-center gap-2 ${
                           isSelected
                             ? 'bg-ngr-secondary text-white border-ngr-secondary' 
                             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        } ${!!effectiveAllocation ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        } ${(!!effectiveAllocation || !isAdmin) ? 'cursor-not-allowed' : ''}`}
                       >
                         {isSelected && <Check className="w-4 h-4" />}
                         {PERIOD_LABELS[p]}
@@ -610,18 +637,18 @@ export default function AllocationModal({
                       <label
                         key={slot}
                         className={`
-                          flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors
+                          flex items-center gap-2 p-2 rounded-lg border transition-colors
                           ${isSelected
                             ? 'bg-ngr-light border-ngr-secondary text-ngr-primary'
                             : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                           }
-                          ${!!effectiveAllocation ? 'opacity-50 cursor-not-allowed' : ''}
+                          ${(!!effectiveAllocation || !isAdmin) ? 'cursor-not-allowed' : 'cursor-pointer'}
                         `}
                       >
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          disabled={!!effectiveAllocation} // Desabilita se estiver editando
+                          disabled={!!effectiveAllocation || !isAdmin} // Desabilita se estiver editando ou não for admin
                           onChange={(e) => {
                             if (e.target.checked) {
                               setFormData(prev => ({ ...prev, timeSlots: [...prev.timeSlots, slot] }));
@@ -684,6 +711,7 @@ export default function AllocationModal({
                         projectId: requiresProject ? prev.projectId : ''
                       }));
                     }}
+                    disabled={!isAdmin}
                     className="select-field"
                   >
                     {availableStatuses.map(({ key, label }) => (
@@ -715,6 +743,7 @@ export default function AllocationModal({
                           }
                         }
                       }}
+                      disabled={!isAdmin}
                       className="select-field"
                     >
                       <option value="">Todos os gerentes</option>
@@ -736,7 +765,7 @@ export default function AllocationModal({
                       value={formData.projectId}
                       onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
                       className="select-field"
-                      disabled={!!(selectedManagerFilter && filteredProjects.length === 0)}
+                      disabled={!!(selectedManagerFilter && filteredProjects.length === 0) || !isAdmin}
                     >
                       <option value="">
                         {selectedManagerFilter && filteredProjects.length === 0
@@ -767,6 +796,7 @@ export default function AllocationModal({
                   type="text"
                   value={formData.artiaActivity}
                   onChange={(e) => setFormData(prev => ({ ...prev, artiaActivity: e.target.value }))}
+                  disabled={!isAdmin}
                   className="input-field"
                   placeholder="ID ou link da atividade no Artia..."
                 />
@@ -778,6 +808,7 @@ export default function AllocationModal({
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  disabled={!isAdmin}
                   className="input-field min-h-[60px] resize-none"
                   placeholder="Observações adicionais..."
                 />
@@ -787,9 +818,9 @@ export default function AllocationModal({
               <div className="pt-4 border-t border-slate-200 space-y-3">
                 <div className="flex flex-wrap gap-2 justify-end">
                   <button type="button" onClick={handleClose} className="btn-secondary px-4 py-2 text-sm">
-                    Cancelar
+                    Fechar
                   </button>
-                  {effectiveAllocation && (
+                  {effectiveAllocation && isAdmin && (
                     <button 
                       type="button" 
                       onClick={handleNew}
@@ -800,16 +831,18 @@ export default function AllocationModal({
                       Novo
                     </button>
                   )}
-                  <button type="submit" disabled={isSubmitting} className="btn-primary flex items-center gap-1.5 px-4 py-2 text-sm">
-                    {isSubmitting ? (
-                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-b-2 border-white" />
-                    ) : (
-                      <Save className="w-3.5 h-3.5" />
-                    )}
-                    Salvar
-                  </button>
+                  {isAdmin && (
+                    <button type="submit" disabled={isSubmitting} className="btn-primary flex items-center gap-1.5 px-4 py-2 text-sm">
+                      {isSubmitting ? (
+                        <div className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-b-2 border-white" />
+                      ) : (
+                        <Save className="w-3.5 h-3.5" />
+                      )}
+                      Salvar
+                    </button>
+                  )}
                 </div>
-                {effectiveAllocation && (
+                {effectiveAllocation && isAdmin && (
                   <div className="flex justify-start">
                     <button type="button" onClick={handleDelete} disabled={isSubmitting} className="text-red-500 hover:text-red-700 text-sm flex items-center gap-1.5 px-2 py-1">
                       <Trash2 className="w-3.5 h-3.5" />
@@ -832,11 +865,11 @@ export default function AllocationModal({
                 id="file-upload"
                 className="hidden"
                 onChange={handleFileUpload}
-                disabled={isUploading}
+                disabled={isUploading || !isAdmin}
               />
               <label 
                 htmlFor="file-upload" 
-                className="cursor-pointer flex flex-col items-center gap-2"
+                className={`flex flex-col items-center gap-2 ${isAdmin ? 'cursor-pointer' : 'cursor-not-allowed'}`}
               >
                 <Upload className="w-8 h-8 text-slate-400" />
                 <span className="text-sm text-slate-600">
@@ -872,13 +905,15 @@ export default function AllocationModal({
                       >
                         <Download className="w-4 h-4" />
                       </a>
-                      <button
-                        onClick={() => handleRemoveAttachment(attachment._id!)}
-                        className="p-2 text-slate-400 hover:text-red-500"
-                        title="Remover"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleRemoveAttachment(attachment._id!)}
+                          className="p-2 text-slate-400 hover:text-red-500"
+                          title="Remover"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))

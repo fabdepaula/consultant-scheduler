@@ -117,13 +117,15 @@ body {
 .input-field {
   @apply w-full bg-white border border-slate-300 rounded-lg px-4 py-2 text-slate-900 
          focus:outline-none focus:border-ngr-secondary focus:ring-2 focus:ring-ngr-secondary/20
-         placeholder:text-slate-400;
+         placeholder:text-slate-400
+         disabled:opacity-100 disabled:cursor-not-allowed;
 }
 
 .select-field {
   @apply w-full bg-white border border-slate-300 rounded-lg px-4 py-2 text-slate-900 
          focus:outline-none focus:border-ngr-secondary focus:ring-2 focus:ring-ngr-secondary/20
-         appearance-none cursor-pointer;
+         appearance-none cursor-pointer
+         disabled:opacity-100 disabled:cursor-not-allowed;
 }
 
 .btn-primary {

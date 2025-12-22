@@ -49,8 +49,8 @@ const statusConfigs = [
 
 // Usuários - todos com senha padrão Ngr@123
 // Teams serão associados após criação dos teams
+// NOTA: Admin é criado separadamente, não está nesta lista
 const users = [
-  { name: 'Administrador', email: 'admin@ngrglobal.com.br', profile: 'admin', functions: ['gerente'], teams: [], hasAgenda: false, active: true, mustChangePassword: false },
   { name: 'Andre Mariano', email: 'andre.mariano@ngrglobal.com.br', profile: 'usuario', functions: ['integração'], teams: ['Projeto'], hasAgenda: true, active: true, mustChangePassword: true },
   { name: 'Caio Fonseca', email: 'caio.fonseca@ngrglobal.com.br', profile: 'usuario', functions: ['import', 'export'], teams: ['Projeto'], hasAgenda: true, active: true, mustChangePassword: true },
   { name: 'Cleber Zaghi', email: 'cleber.zaghi@ngrglobal.com.br', profile: 'usuario', functions: ['import', 'export', 'cambio'], teams: ['Projeto'], hasAgenda: true, active: true, mustChangePassword: true },
@@ -233,7 +233,8 @@ async function seed() {
     await mongoose.connect(MONGODB_URI);
     console.log('📦 Connected to MongoDB');
 
-    // Clear existing data
+    // Clear existing data - SEMPRE limpar antes de criar
+    console.log('🗑️  Clearing existing data...');
     await User.deleteMany({});
     await Project.deleteMany({});
     await Allocation.deleteMany({});
@@ -241,69 +242,124 @@ async function seed() {
     await FunctionConfig.deleteMany({});
     await Team.deleteMany({});
     await DataSyncConfig.deleteMany({});
-    console.log('🗑️  Cleared existing data');
+    console.log('✅ All existing data cleared');
 
-    // Create teams first (needed for user references)
-    const createdTeams = await Team.insertMany(teams);
-    const teamMap = new Map(createdTeams.map(t => [t.name, t._id]));
-    console.log(`👥 Created ${createdTeams.length} teams`);
-
-    // Create status configs
-    await StatusConfig.insertMany(statusConfigs);
-    console.log(`📊 Created ${statusConfigs.length} status configurations`);
-
-    // Create function configs
-    await FunctionConfig.insertMany(functionConfigs);
-    console.log(`🔧 Created ${functionConfigs.length} function configurations`);
-
-    // Create admin user
-    const admin = await User.create({
-      name: 'Administrador',
-      email: 'admin@ngrglobal.com.br',
-      password: 'Ngr@123',
-      profile: 'admin',
-      functions: ['gerente'],
-      teams: [],
-      hasAgenda: false,
-      active: true,
-      mustChangePassword: false,
-    });
-    console.log('👤 Created admin user: admin@ngrglobal.com.br / Ngr@123');
-
-    // Create users with team references
-    const createdUsers = await Promise.all(
-      users.map(u => {
-        const teamIds = u.teams.map(teamName => teamMap.get(teamName)).filter(Boolean);
-        return User.create({
-          name: u.name,
-          email: u.email,
-          password: 'Ngr@123',
-          profile: u.profile,
-          functions: u.functions,
-          teams: teamIds,
-          hasAgenda: u.hasAgenda,
-          active: u.active,
-          mustChangePassword: u.mustChangePassword,
-        });
-      })
-    );
-    console.log(`👥 Created ${createdUsers.length} users (password: Ngr@123)`);
-
-    // Create projects
-    const createdProjects = await Promise.all(
-      projects.map(p =>
-        Project.create({
-          projectId: p.projectId,
-          client: p.client,
-          projectType: p.projectType,
-          projectName: p.projectName,
-          projectManager: p.projectManager,
-          active: p.active,
-          createdBy: admin._id,
-        })
+    // Create teams first (needed for user references) - usar upsert para evitar duplicação
+    const createdTeams = await Promise.all(
+      teams.map(team => 
+        Team.findOneAndUpdate(
+          { name: team.name },
+          team,
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        )
       )
     );
-    console.log(`📁 Created ${createdProjects.length} projects`);
+    const teamMap = new Map(createdTeams.map(t => [t.name, t._id]));
+    console.log(`👥 Created/updated ${createdTeams.length} teams`);
+
+    // Create status configs - usar upsert para evitar duplicação
+    await Promise.all(
+      statusConfigs.map(config =>
+        StatusConfig.findOneAndUpdate(
+          { key: config.key },
+          config,
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        )
+      )
+    );
+    console.log(`📊 Created/updated ${statusConfigs.length} status configurations`);
+
+    // Create function configs - usar upsert para evitar duplicação
+    await Promise.all(
+      functionConfigs.map(config =>
+        FunctionConfig.findOneAndUpdate(
+          { key: config.key },
+          config,
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        )
+      )
+    );
+    console.log(`🔧 Created/updated ${functionConfigs.length} function configurations`);
+
+    // Create admin user - usar findOne + save para garantir que o hook pre-save seja executado
+    let admin = await User.findOne({ email: 'admin@ngrglobal.com.br' });
+    if (admin) {
+      admin.name = 'Administrador';
+      admin.password = 'Ngr@123'; // Será hasheado pelo pre-save hook
+      admin.profile = 'admin';
+      admin.functions = ['gerente'];
+      admin.teams = [];
+      admin.hasAgenda = false;
+      admin.active = true;
+      admin.mustChangePassword = false;
+      await admin.save(); // Isso dispara o pre-save hook
+    } else {
+      admin = await User.create({
+        name: 'Administrador',
+        email: 'admin@ngrglobal.com.br',
+        password: 'Ngr@123',
+        profile: 'admin',
+        functions: ['gerente'],
+        teams: [],
+        hasAgenda: false,
+        active: true,
+        mustChangePassword: false,
+      });
+    }
+    console.log('👤 Created/updated admin user: admin@ngrglobal.com.br / Ngr@123');
+
+    // Create users with team references - usar findOne + save para garantir hash da senha
+    const createdUsers = await Promise.all(
+      users.map(async (u) => {
+        const teamIds = u.teams.map(teamName => teamMap.get(teamName)).filter(Boolean) as mongoose.Types.ObjectId[];
+        let user = await User.findOne({ email: u.email });
+        if (user) {
+          user.name = u.name;
+          user.password = 'Ngr@123'; // Será hasheado pelo pre-save hook
+          user.profile = u.profile as 'admin' | 'usuario';
+          user.functions = u.functions as ('gerente' | 'import' | 'export' | 'cambio' | 'drawback' | 'recof' | 'suporte')[];
+          user.teams = teamIds;
+          user.hasAgenda = u.hasAgenda;
+          user.active = u.active;
+          user.mustChangePassword = u.mustChangePassword;
+          await user.save(); // Isso dispara o pre-save hook
+        } else {
+          user = await User.create({
+            name: u.name,
+            email: u.email,
+            password: 'Ngr@123',
+            profile: u.profile as 'admin' | 'usuario',
+            functions: u.functions as ('gerente' | 'import' | 'export' | 'cambio' | 'drawback' | 'recof' | 'suporte')[],
+            teams: teamIds,
+            hasAgenda: u.hasAgenda,
+            active: u.active,
+            mustChangePassword: u.mustChangePassword,
+          });
+        }
+        return user;
+      })
+    );
+    console.log(`👥 Created/updated ${createdUsers.length} users (password: Ngr@123)`);
+
+    // Create projects - usar upsert para evitar duplicação
+    const createdProjects = await Promise.all(
+      projects.map(p =>
+        Project.findOneAndUpdate(
+          { projectId: p.projectId },
+          {
+            projectId: p.projectId,
+            client: p.client,
+            projectType: p.projectType,
+            projectName: p.projectName,
+            projectManager: p.projectManager,
+            active: p.active,
+            createdBy: admin._id,
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        )
+      )
+    );
+    console.log(`📁 Created/updated ${createdProjects.length} projects`);
 
     // Create allocations from exported data
     // Look for seed-allocations.json in server directory (when running from server/)
@@ -346,9 +402,17 @@ async function seed() {
       console.log('⚠️  seed-allocations.json not found, skipping allocations');
     }
 
-    // Create data sync configs
-    await DataSyncConfig.insertMany(dataSyncConfigs);
-    console.log(`🔄 Created ${dataSyncConfigs.length} data sync configurations`);
+    // Create data sync configs - usar upsert para evitar duplicação
+    await Promise.all(
+      dataSyncConfigs.map(config =>
+        DataSyncConfig.findOneAndUpdate(
+          { name: config.name },
+          config,
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        )
+      )
+    );
+    console.log(`🔄 Created/updated ${dataSyncConfigs.length} data sync configurations`);
 
     console.log('\n✅ Seed completed successfully!');
     console.log('\n📋 Login credentials:');
