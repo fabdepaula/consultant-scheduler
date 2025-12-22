@@ -413,7 +413,7 @@ export const addAttachment = async (req: Request, res: Response, next: NextFunct
       action: 'attachment_added',
       field: 'attachments',
       newValue: file.originalname,
-      changedBy: req.user?._id,
+      changedBy: req.user!._id,
       changedAt: new Date(),
       description: `Arquivo "${file.originalname}" anexado`,
     }];
@@ -468,7 +468,7 @@ export const removeAttachment = async (req: Request, res: Response, next: NextFu
       action: 'attachment_removed',
       field: 'attachments',
       oldValue: attachment.originalName,
-      changedBy: req.user?._id,
+      changedBy: req.user!._id,
       changedAt: new Date(),
       description: `Arquivo "${attachment.originalName}" removido`,
     }];
@@ -544,7 +544,7 @@ export const deleteAllocation = async (req: Request, res: Response, next: NextFu
           field: 'status',
           oldValue: 'conflito',
           newValue: 'a_confirmar',
-          changedBy: req.user?._id,
+          changedBy: req.user!._id,
           changedAt: new Date(),
           description: 'Status alterado para À CONFIRMAR automaticamente (conflito resolvido)',
         });

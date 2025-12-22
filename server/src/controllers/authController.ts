@@ -5,7 +5,7 @@ import User from '../models/User.js';
 import { JwtPayload } from '../types/index.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
 
 const generateToken = (user: any): string => {
   const payload: JwtPayload = {
@@ -14,7 +14,7 @@ const generateToken = (user: any): string => {
     profile: user.profile,
   };
   
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as string | number });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
