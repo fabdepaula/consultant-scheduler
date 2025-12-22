@@ -14,11 +14,8 @@ const generateToken = (user: any): string => {
     profile: user.profile,
   };
   
-  const options: SignOptions = {
-    expiresIn: JWT_EXPIRES_IN as string | number,
-  };
-  
-  return jwt.sign(payload, JWT_SECRET, options);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as any);
 };
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
