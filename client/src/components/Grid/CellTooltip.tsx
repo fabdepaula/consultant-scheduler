@@ -31,7 +31,7 @@ export default function CellTooltip({ allocation, x, y }: Props) {
     return {
       backgroundColor: '#CCCCCC',
       color: '#000000',
-      label: STATUS_LABELS[allocation.status] || allocation.status
+      label: (STATUS_LABELS[allocation.status as AllocationStatus] || allocation.status) as string
     };
   }, [statusConfigs, allocation.status]);
 

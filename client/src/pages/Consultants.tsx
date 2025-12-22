@@ -578,9 +578,9 @@ export default function Consultants() {
 
               <MultiSelectDropdown
                 label="Funções"
-                options={availableFunctions.map(func => ({ value: func.key, label: func.label }))}
+                options={availableFunctions.map(func => ({ value: func.key as UserFunction, label: func.label }))}
                 selected={formData.functions}
-                onChange={(selected) => setFormData(prev => ({ ...prev, functions: selected }))}
+                onChange={(selected) => setFormData(prev => ({ ...prev, functions: selected as UserFunction[] }))}
                 placeholder="Selecione as funções..."
               />
 

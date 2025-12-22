@@ -736,7 +736,7 @@ export default function AllocationModal({
                       value={formData.projectId}
                       onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
                       className="select-field"
-                      disabled={selectedManagerFilter && filteredProjects.length === 0}
+                      disabled={!!(selectedManagerFilter && filteredProjects.length === 0)}
                     >
                       <option value="">
                         {selectedManagerFilter && filteredProjects.length === 0

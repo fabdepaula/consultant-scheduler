@@ -8,7 +8,6 @@ import {
   Trash2,
   Play,
   Save,
-  Table2,
   Clock3,
   Activity,
   AlertCircle,
@@ -110,7 +109,7 @@ const defaultForm: DataSyncConfig = {
 };
 
 export default function Middleware() {
-  const { user } = useAuthStore();
+  // const { user } = useAuthStore(); // Não usado no momento
   const [configs, setConfigs] = useState<DataSyncConfig[]>([]);
   const [views, setViews] = useState<ViewOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,7 +225,7 @@ export default function Middleware() {
         transforms,
         defaultValue,
         mapLines,
-        updateBehavior: m.updateBehavior || 'update', // Padrão: sempre atualiza
+        updateBehavior: (m.updateBehavior === 'keep' ? 'keep' : 'update') as 'update' | 'keep', // Padrão: sempre atualiza
       };
     });
 
@@ -334,7 +333,7 @@ export default function Middleware() {
         sourceField: m.sourceField,
         targetField: m.targetField,
         transformations,
-        updateBehavior: m.updateBehavior || 'update', // Padrão: sempre atualiza
+        updateBehavior: (m.updateBehavior === 'keep' ? 'keep' : 'update') as 'update' | 'keep', // Padrão: sempre atualiza
       };
     });
   };
@@ -520,7 +519,7 @@ export default function Middleware() {
     }
   };
 
-  const HistoryItem = ({ entry, index }: { entry: ExecutionLog; index: number }) => {
+  const HistoryItem = ({ entry }: { entry: ExecutionLog; index: number }) => {
     const [expanded, setExpanded] = useState(false);
     const duration = new Date(entry.finishedAt).getTime() - new Date(entry.startedAt).getTime();
     const durationSeconds = (duration / 1000).toFixed(1);
@@ -1195,7 +1194,11 @@ export default function Middleware() {
                             ...form,
                             schedule: {
                               ...form.schedule,
-                              preset: { ...(form.schedule?.preset || {}), timeOfDay: e.target.value },
+                              preset: { 
+                                type: form.schedule?.preset?.type || 'daily',
+                                ...(form.schedule?.preset || {}), 
+                                timeOfDay: e.target.value 
+                              },
                             },
                           })}
                         />
@@ -1213,7 +1216,11 @@ export default function Middleware() {
                               ...form,
                               schedule: {
                                 ...form.schedule,
-                                preset: { ...(form.schedule?.preset || {}), dayOfWeek: Number(e.target.value) },
+                                preset: { 
+                                  type: form.schedule?.preset?.type || 'weekly',
+                                  ...(form.schedule?.preset || {}), 
+                                  dayOfWeek: Number(e.target.value) 
+                                },
                               },
                             })}
                           />
@@ -1232,7 +1239,11 @@ export default function Middleware() {
                               ...form,
                               schedule: {
                                 ...form.schedule,
-                                preset: { ...(form.schedule?.preset || {}), intervalMinutes: Number(e.target.value) },
+                                preset: { 
+                                  type: form.schedule?.preset?.type || 'interval',
+                                  ...(form.schedule?.preset || {}), 
+                                  intervalMinutes: Number(e.target.value) 
+                                },
                               },
                             })}
                           />

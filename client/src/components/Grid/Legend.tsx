@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useAgendaStore } from '../../store/agendaStore';
-import { STATUS_LABELS, AllocationStatus } from '../../types';
 
 // Cores padrão para fallback
 const DEFAULT_STATUS_CONFIG: Record<string, { bg: string; text: string; label: string }> = {

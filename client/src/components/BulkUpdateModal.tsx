@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Save, Calendar, Clock, Building2, Users2, ChevronDown, Check, Trash2, Plus } from 'lucide-react';
 import { format, eachDayOfInterval, endOfWeek, addWeeks } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { useAgendaStore } from '../store/agendaStore';
 import { allocationsAPI } from '../services/api';
 import { Period, TimeSlot, TIME_SLOTS_BY_PERIOD, TIME_SLOT_LABELS, PERIOD_LABELS } from '../types';
