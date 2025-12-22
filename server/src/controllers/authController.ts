@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import { JwtPayload } from '../types/index.js';
@@ -14,7 +14,11 @@ const generateToken = (user: any): string => {
     profile: user.profile,
   };
   
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  const options: SignOptions = {
+    expiresIn: JWT_EXPIRES_IN,
+  };
+  
+  return jwt.sign(payload, JWT_SECRET, options);
 };
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
