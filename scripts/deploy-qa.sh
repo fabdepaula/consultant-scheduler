@@ -42,3 +42,4 @@ docker system prune -f
 echo "✅ Deploy para QA concluído!"
 echo "📊 Verifique os logs: docker-compose -f docker-compose.qa.yml logs -f"
 
+

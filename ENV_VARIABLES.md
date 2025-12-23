@@ -73,3 +73,4 @@ Adicione esta variável de ambiente no Render:
 - `VITE_API_URL` = URL do backend (ex: `https://consultant-scheduler-api.onrender.com`)
 
 
+
