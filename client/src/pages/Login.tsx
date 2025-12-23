@@ -121,15 +121,18 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <p className="text-center text-sm text-slate-500">
-              Credenciais de teste:
-            </p>
-            <div className="mt-2 text-center text-xs text-slate-400 space-y-1">
-              <p><span className="text-slate-600">Admin:</span> admin@ngrglobal.com.br / Ngr@123</p>
-              <p><span className="text-slate-600">Consultor:</span> [email]@ngrglobal.com.br / Ngr@123</p>
+          {/* Mostrar credenciais de teste apenas em desenvolvimento */}
+          {import.meta.env.DEV && (
+            <div className="mt-6 pt-6 border-t border-slate-200">
+              <p className="text-center text-sm text-slate-500">
+                Credenciais de teste:
+              </p>
+              <div className="mt-2 text-center text-xs text-slate-400 space-y-1">
+                <p><span className="text-slate-600">Admin:</span> admin@ngrglobal.com.br / Ngr@123</p>
+                <p><span className="text-slate-600">Consultor:</span> [email]@ngrglobal.com.br / Ngr@123</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer */}
