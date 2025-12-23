@@ -73,3 +73,4 @@ echo "✅ Deploy para PRODUÇÃO concluído!"
 echo "📊 Verifique os logs: docker-compose -f docker-compose.prod.yml logs -f"
 
 
+
