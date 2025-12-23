@@ -107,14 +107,22 @@ export default function Dashboard() {
     return managers;
   }, [projects]);
 
-  // Buscar equipes ativas
+  // Buscar equipes visíveis (baseado no perfil do usuário)
   useEffect(() => {
     const fetchTeams = async () => {
       try {
-        const response = await teamsAPI.getActive();
+        // Usar endpoint de equipes visíveis que respeita as permissões do perfil
+        const response = await teamsAPI.getVisible();
         setAvailableTeams(response.data.teams || []);
       } catch (err) {
-        console.error('Error fetching teams:', err);
+        console.error('Error fetching visible teams:', err);
+        // Fallback: buscar todas as equipes ativas se o endpoint falhar
+        try {
+          const fallbackResponse = await teamsAPI.getActive();
+          setAvailableTeams(fallbackResponse.data.teams || []);
+        } catch (fallbackErr) {
+          console.error('Error fetching active teams (fallback):', fallbackErr);
+        }
       }
     };
     fetchTeams();

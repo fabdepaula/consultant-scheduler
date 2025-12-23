@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/User.js';
+import { getAllowedTeamsForUser } from '../services/teamVisibilityService.js';
 
 const DEFAULT_PASSWORD = 'Ngr@123';
 
 // Get all users/consultants
 export const getAllConsultants = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { active, profile, functions, search, hasAgenda, team } = req.query;
+    const { active, profile, functions, search, hasAgenda, team, forAgenda } = req.query;
     
     const query: any = {};
     
@@ -31,6 +32,22 @@ export const getAllConsultants = async (req: Request, res: Response, next: NextF
     if (team) {
       query.teams = team;
     }
+
+    // Se for para agenda, aplicar filtro de equipes permitidas
+    if (forAgenda === 'true' && req.user) {
+      const userId = req.user._id?.toString();
+      if (userId) {
+        const allowedTeamIds = await getAllowedTeamsForUser(userId);
+        if (allowedTeamIds !== null) {
+          if (allowedTeamIds.length === 0) {
+            // Não pode ver nenhuma equipe
+            return res.json({ users: [] });
+          }
+          // Filtrar por equipes permitidas
+          query.teams = { $in: allowedTeamIds };
+        }
+      }
+    }
     
     if (search) {
       query.$or = [
@@ -43,6 +60,7 @@ export const getAllConsultants = async (req: Request, res: Response, next: NextF
     const users = await User.find(query)
       .select('-password')
       .populate('teams', 'name')
+      .populate('role', 'name key')
       .sort({ name: 1 });
 
     res.json({ users });

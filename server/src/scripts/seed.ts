@@ -9,6 +9,8 @@ import StatusConfig from '../models/StatusConfig.js';
 import FunctionConfig from '../models/FunctionConfig.js';
 import Team from '../models/Team.js';
 import DataSyncConfig from '../models/DataSyncConfig.js';
+import Permission from '../models/Permission.js';
+import Role from '../models/Role.js';
 
 dotenv.config();
 
@@ -45,6 +47,38 @@ const statusConfigs = [
   { key: 'ponte', label: 'Ponte', color: '#BFBFBF', textColor: '#000000', order: 7, requiresProject: false },
   { key: 'feriado', label: 'Feriado', color: '#A6A6A6', textColor: '#FFFFFF', order: 8, requiresProject: false },
   { key: 'fim_semana', label: 'Final de Semana', color: '#D9D9D9', textColor: '#000000', order: 9, requiresProject: false },
+];
+
+// Permissões do sistema
+const permissions = [
+  // Agenda
+  { key: 'allocations.view', name: 'Visualizar Alocações', resource: 'allocations', action: 'view', category: 'Agenda', description: 'Permite visualizar alocações na agenda' },
+  { key: 'allocations.create', name: 'Criar Alocações', resource: 'allocations', action: 'create', category: 'Agenda', description: 'Permite criar novas alocações' },
+  { key: 'allocations.update', name: 'Editar Alocações', resource: 'allocations', action: 'update', category: 'Agenda', description: 'Permite editar alocações existentes' },
+  { key: 'allocations.delete', name: 'Remover Alocações', resource: 'allocations', action: 'delete', category: 'Agenda', description: 'Permite remover alocações' },
+  { key: 'allocations.bulk', name: 'Operações em Massa', resource: 'allocations', action: 'bulk', category: 'Agenda', description: 'Permite criar/editar múltiplas alocações de uma vez' },
+  
+  // Usuários/Consultores
+  { key: 'users.view', name: 'Visualizar Usuários', resource: 'users', action: 'view', category: 'Usuários', description: 'Permite visualizar lista de usuários' },
+  { key: 'users.create', name: 'Criar Usuários', resource: 'users', action: 'create', category: 'Usuários', description: 'Permite criar novos usuários' },
+  { key: 'users.update', name: 'Editar Usuários', resource: 'users', action: 'update', category: 'Usuários', description: 'Permite editar usuários existentes' },
+  { key: 'users.delete', name: 'Remover Usuários', resource: 'users', action: 'delete', category: 'Usuários', description: 'Permite remover usuários' },
+  
+  // Projetos
+  { key: 'projects.view', name: 'Visualizar Projetos', resource: 'projects', action: 'view', category: 'Projetos', description: 'Permite visualizar lista de projetos' },
+  { key: 'projects.create', name: 'Criar Projetos', resource: 'projects', action: 'create', category: 'Projetos', description: 'Permite criar novos projetos' },
+  { key: 'projects.update', name: 'Editar Projetos', resource: 'projects', action: 'update', category: 'Projetos', description: 'Permite editar projetos existentes' },
+  { key: 'projects.delete', name: 'Remover Projetos', resource: 'projects', action: 'delete', category: 'Projetos', description: 'Permite remover projetos' },
+  
+  // Configurações
+  { key: 'functions.manage', name: 'Gerenciar Funções', resource: 'functions', action: 'manage', category: 'Configurações', description: 'Permite gerenciar funções de consultores' },
+  { key: 'teams.manage', name: 'Gerenciar Equipes', resource: 'teams', action: 'manage', category: 'Configurações', description: 'Permite gerenciar equipes' },
+  { key: 'status.manage', name: 'Gerenciar Status', resource: 'status', action: 'manage', category: 'Configurações', description: 'Permite gerenciar status de alocações' },
+  { key: 'roles.manage', name: 'Gerenciar Perfis', resource: 'roles', action: 'manage', category: 'Configurações', description: 'Permite gerenciar perfis e permissões' },
+  
+  // Dados e Integrações
+  { key: 'external-data.view', name: 'Visualizar Dados Externos', resource: 'external-data', action: 'view', category: 'Dados', description: 'Permite visualizar dados externos' },
+  { key: 'middleware.manage', name: 'Gerenciar Interfaces', resource: 'middleware', action: 'manage', category: 'Dados', description: 'Permite gerenciar interfaces/middleware' },
 ];
 
 // Usuários - todos com senha padrão Ngr@123
@@ -242,6 +276,8 @@ async function seed() {
     await FunctionConfig.deleteMany({});
     await Team.deleteMany({});
     await DataSyncConfig.deleteMany({});
+    await Permission.deleteMany({});
+    await Role.deleteMany({});
     console.log('✅ All existing data cleared');
 
     // Create teams first (needed for user references) - usar upsert para evitar duplicação
@@ -256,6 +292,58 @@ async function seed() {
     );
     const teamMap = new Map(createdTeams.map(t => [t.name, t._id]));
     console.log(`👥 Created/updated ${createdTeams.length} teams`);
+
+    // Create permissions - usar upsert para evitar duplicação
+    const createdPermissions = await Promise.all(
+      permissions.map(perm =>
+        Permission.findOneAndUpdate(
+          { key: perm.key },
+          perm,
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        )
+      )
+    );
+    const permissionMap = new Map(createdPermissions.map(p => [p.key, p._id]));
+    console.log(`🔐 Created/updated ${createdPermissions.length} permissions`);
+
+    // Create roles - usar upsert para evitar duplicação
+    // Perfil Administrador - todas as permissões, todas as equipes
+    const adminRole = await Role.findOneAndUpdate(
+      { key: 'admin' },
+      {
+        name: 'Administrador',
+        key: 'admin',
+        description: 'Perfil com acesso total ao sistema',
+        permissions: Array.from(permissionMap.values()), // Todas as permissões
+        allowedTeams: undefined, // undefined = pode ver todas as equipes
+        active: true,
+        isSystem: true, // Perfil do sistema não pode ser deletado
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    // Perfil Usuário - apenas visualização de alocações
+    const userRole = await Role.findOneAndUpdate(
+      { key: 'usuario' },
+      {
+        name: 'Usuário',
+        key: 'usuario',
+        description: 'Perfil com acesso limitado - apenas visualização',
+        permissions: [
+          permissionMap.get('allocations.view'),
+        ].filter(Boolean) as any, // Apenas visualizar alocações
+        allowedTeams: undefined, // undefined = pode ver todas as equipes (por enquanto)
+        active: true,
+        isSystem: true, // Perfil do sistema não pode ser deletado
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    const roleMap = new Map([
+      ['admin', adminRole._id],
+      ['usuario', userRole._id],
+    ]);
+    console.log(`👤 Created/updated 2 system roles (admin, usuario)`);
 
     // Create status configs - usar upsert para evitar duplicação
     await Promise.all(
@@ -287,6 +375,7 @@ async function seed() {
       admin.name = 'Administrador';
       admin.password = 'Ngr@123'; // Será hasheado pelo pre-save hook
       admin.profile = 'admin';
+      admin.role = roleMap.get('admin') as any;
       admin.functions = ['gerente'];
       admin.teams = [];
       admin.hasAgenda = false;
@@ -299,6 +388,7 @@ async function seed() {
         email: 'admin@ngrglobal.com.br',
         password: 'Ngr@123',
         profile: 'admin',
+        role: roleMap.get('admin'),
         functions: ['gerente'],
         teams: [],
         hasAgenda: false,
@@ -313,10 +403,12 @@ async function seed() {
       users.map(async (u) => {
         const teamIds = u.teams.map(teamName => teamMap.get(teamName)).filter(Boolean) as mongoose.Types.ObjectId[];
         let user = await User.findOne({ email: u.email });
+        const userRoleId = roleMap.get(u.profile);
         if (user) {
           user.name = u.name;
           user.password = 'Ngr@123'; // Será hasheado pelo pre-save hook
           user.profile = u.profile as 'admin' | 'usuario';
+          user.role = userRoleId as any;
           user.functions = u.functions as ('gerente' | 'import' | 'export' | 'cambio' | 'drawback' | 'recof' | 'suporte')[];
           user.teams = teamIds;
           user.hasAgenda = u.hasAgenda;
@@ -329,6 +421,7 @@ async function seed() {
             email: u.email,
             password: 'Ngr@123',
             profile: u.profile as 'admin' | 'usuario',
+            role: userRoleId,
             functions: u.functions as ('gerente' | 'import' | 'export' | 'cambio' | 'drawback' | 'recof' | 'suporte')[],
             teams: teamIds,
             hasAgenda: u.hasAgenda,

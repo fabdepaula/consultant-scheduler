@@ -8,6 +8,8 @@ import functionConfigRoutes from './functionConfigRoutes.js';
 import teamRoutes from './teamRoutes.js';
 import externalDataRoutes from './externalDataRoutes.js';
 import dataSyncRoutes from './dataSyncRoutes.js';
+import roleRoutes from './roleRoutes.js';
+import permissionRoutes from './permissionRoutes.js';
 
 const router = Router();
 
@@ -20,6 +22,8 @@ router.use('/function-config', functionConfigRoutes);
 router.use('/teams', teamRoutes);
 router.use('/external-data', externalDataRoutes);
 router.use('/middleware', dataSyncRoutes);
+router.use('/roles', roleRoutes);
+router.use('/permissions', permissionRoutes);
 
 // Health check
 router.get('/health', (req, res) => {

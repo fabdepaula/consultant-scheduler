@@ -3,6 +3,7 @@ import { format, addDays, isSameDay, isWeekend } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAgendaStore } from '../../store/agendaStore';
 import { useAuthStore } from '../../store/authStore';
+import { usePermissions } from '../../hooks/usePermissions';
 import { functionConfigAPI } from '../../services/api';
 import { 
   User, 
@@ -52,7 +53,9 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
     isLoading 
   } = useAgendaStore();
   const { user } = useAuthStore();
-  const isAdmin = user?.profile === 'admin';
+  const { hasPermission } = usePermissions();
+  // Compatibilidade: manter isAdmin para verificação rápida
+  const isAdmin = user?.profile === 'admin' || hasPermission('allocations.create');
   const [functions, setFunctions] = useState<FunctionConfig[]>([]);
 
   useEffect(() => {

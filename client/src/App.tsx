@@ -11,6 +11,7 @@ import StatusConfig from './pages/StatusConfig';
 import Teams from './pages/Teams';
 import ExternalData from './pages/ExternalData';
 import Middleware from './pages/Middleware';
+import Roles from './pages/Roles';
 import Layout from './components/Layout/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -170,6 +171,11 @@ function App() {
           <Route path="middleware" element={
             <AdminRoute>
               <Middleware />
+            </AdminRoute>
+          } />
+          <Route path="perfis" element={
+            <AdminRoute>
+              <Roles />
             </AdminRoute>
           } />
         </Route>

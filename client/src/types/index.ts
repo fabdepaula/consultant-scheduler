@@ -33,12 +33,38 @@ export type TimeSlot =
   | '18-20' 
   | '20-22';
 
+// RBAC - Permissões e Perfis
+export interface Permission {
+  id: string;
+  _id?: string;
+  name: string;
+  key: string;
+  resource: string;
+  action: string;
+  description?: string;
+  category: string;
+  active: boolean;
+}
+
+export interface Role {
+  id: string;
+  _id?: string;
+  name: string;
+  key: string;
+  description?: string;
+  permissions: Permission[] | string[];
+  allowedTeams?: Team[] | string[];
+  active: boolean;
+  isSystem: boolean;
+}
+
 export interface User {
   id: string;
   _id?: string;
   name: string;
   email: string;
-  profile: UserProfile;      // Nível de acesso (admin/usuario)
+  profile: UserProfile;      // Nível de acesso (admin/usuario) - DEPRECATED, manter para compatibilidade
+  role?: Role | string;      // NOVO: Referência para Role
   functions: UserFunction[]; // Funções do consultor
   teams?: Team[] | string[]; // Equipes do usuário
   hasAgenda: boolean;        // Se o usuário possui agenda

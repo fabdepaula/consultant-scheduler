@@ -1,9 +1,9 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { 
-  Calendar, 
-  Users, 
-  FolderKanban, 
-  LogOut, 
+import {
+  Calendar,
+  Users,
+  FolderKanban,
+  LogOut,
   Menu,
   X,
   User,
@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Database,
-  Activity
+  Activity,
+  Shield
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
@@ -48,6 +49,7 @@ export default function Layout() {
       { to: '/funcoes', icon: Settings, label: 'Funções' },
       { to: '/equipes', icon: Users2, label: 'Equipes' },
       { to: '/status', icon: Palette, label: 'Status' },
+      { to: '/perfis', icon: Shield, label: 'Perfis' },
       { to: '/dados-externos', icon: Database, label: 'Dados Externos' },
       { to: '/middleware', icon: Activity, label: 'Middleware' },
     ] : []),

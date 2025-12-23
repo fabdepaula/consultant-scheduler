@@ -1,0 +1,29 @@
+name: Deploy to QA
+
+on:
+  push:
+    branches:
+      - qa
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to QA server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.QA_HOST }}
+          username: ${{ secrets.QA_USER }}
+          key: ${{ secrets.QA_SSH_KEY }}
+          script: |
+            cd /opt/consultant-scheduler
+            git pull origin qa
+            docker-compose -f docker-compose.qa.yml down
+            docker-compose -f docker-compose.qa.yml build
+            docker-compose -f docker-compose.qa.yml up -d
+            docker system prune -f
+

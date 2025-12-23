@@ -26,6 +26,11 @@ const userSchema = new Schema<IUser>(
       enum: ['admin', 'usuario'],
       default: 'usuario',
     },
+    role: {
+      type: Schema.Types.ObjectId,
+      ref: 'Role',
+      default: null,
+    },
     functions: {
       type: [String],
       default: [],
@@ -82,6 +87,7 @@ userSchema.methods.comparePassword = async function (candidatePassword: string):
 
 // Index for efficient queries (email já tem índice via unique: true)
 userSchema.index({ profile: 1 });
+userSchema.index({ role: 1 });
 userSchema.index({ active: 1 });
 
 const User = mongoose.model<IUser>('User', userSchema);

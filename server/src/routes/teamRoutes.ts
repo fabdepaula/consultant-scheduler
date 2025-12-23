@@ -3,6 +3,7 @@ import { authenticate, isAdmin } from '../middleware/auth.js';
 import {
   getAllTeams,
   getActiveTeams,
+  getVisibleTeams,
   createTeam,
   updateTeam,
   deleteTeam,
@@ -18,6 +19,9 @@ router.get('/', getAllTeams);
 
 // Get active teams only (for dropdowns)
 router.get('/active', getActiveTeams);
+
+// Get visible teams for current user (based on role permissions)
+router.get('/visible', getVisibleTeams);
 
 // Admin only routes
 router.post('/', isAdmin, createTeam);

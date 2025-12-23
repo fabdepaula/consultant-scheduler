@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Team from '../models/Team.js';
+import { getVisibleTeamsForUser } from '../services/teamVisibilityService.js';
 
 // Get all teams
 export const getAllTeams = async (req: Request, res: Response, next: NextFunction) => {
@@ -15,6 +16,22 @@ export const getAllTeams = async (req: Request, res: Response, next: NextFunctio
 export const getActiveTeams = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const teams = await Team.find({ active: true }).sort({ name: 1 });
+    res.json({ teams });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get visible teams for current user (based on role)
+export const getVisibleTeams = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Não autorizado' });
+    }
+
+    const userId = req.user._id.toString();
+    const teams = await getVisibleTeamsForUser(userId);
+
     res.json({ teams });
   } catch (error) {
     next(error);

@@ -188,6 +188,9 @@ export const teamsAPI = {
   getActive: () =>
     api.get('/teams/active'),
   
+  getVisible: () =>
+    api.get('/teams/visible'),
+  
   create: (data: { name: string }) =>
     api.post('/teams', data),
   
@@ -196,6 +199,49 @@ export const teamsAPI = {
   
   delete: (id: string) =>
     api.delete(`/teams/${id}`),
+};
+
+// Roles API
+export const rolesAPI = {
+  getAll: () =>
+    api.get('/roles'),
+  
+  getById: (id: string) =>
+    api.get(`/roles/${id}`),
+  
+  create: (data: {
+    name: string;
+    key: string;
+    description?: string;
+    permissions: string[];
+    allowedTeams?: string[] | null;
+    active?: boolean;
+  }) =>
+    api.post('/roles', data),
+  
+  update: (id: string, data: Partial<{
+    name: string;
+    description?: string;
+    permissions: string[];
+    allowedTeams?: string[] | null;
+    active: boolean;
+  }>) =>
+    api.put(`/roles/${id}`, data),
+  
+  delete: (id: string) =>
+    api.delete(`/roles/${id}`),
+};
+
+// Permissions API
+export const permissionsAPI = {
+  getAll: (params?: { category?: string; active?: boolean }) =>
+    api.get('/permissions', { params }),
+  
+  getById: (id: string) =>
+    api.get(`/permissions/${id}`),
+  
+  getByCategory: (category: string) =>
+    api.get(`/permissions/category/${category}`),
 };
 
 // External Data API (MySQL Views)

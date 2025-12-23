@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import Allocation from '../models/Allocation.js';
 import StatusConfig from '../models/StatusConfig.js';
+import User from '../models/User.js';
 import mongoose from 'mongoose';
 import path from 'path';
 import fs from 'fs';
+import { getAllowedTeamsForUser } from '../services/teamVisibilityService.js';
 
 // Get allocations with filters
 export const getAllocations = async (req: Request, res: Response, next: NextFunction) => {
@@ -81,6 +83,25 @@ export const getAgendaAllocations = async (req: Request, res: Response, next: Ne
       return res.status(400).json({ message: 'startDate e endDate são obrigatórios' });
     }
 
+    // Obter equipes permitidas para o usuário atual
+    const userId = req.user?._id?.toString();
+    let allowedTeamIds: string[] | null = null;
+    
+    if (userId) {
+      allowedTeamIds = await getAllowedTeamsForUser(userId);
+    }
+
+    // Se o usuário tem restrição de equipes, filtrar consultores
+    let consultantFilter: any = { active: true, hasAgenda: true };
+    if (allowedTeamIds !== null) {
+      // Se é array vazio, não pode ver nenhuma equipe
+      if (allowedTeamIds.length === 0) {
+        return res.json({ allocations: [], grouped: {} });
+      }
+      // Filtrar consultores que pertencem às equipes permitidas
+      consultantFilter.teams = { $in: allowedTeamIds };
+    }
+
     const query: any = {
       date: {
         $gte: new Date(startDate as string),
@@ -88,8 +109,20 @@ export const getAgendaAllocations = async (req: Request, res: Response, next: Ne
       },
     };
 
+    // Buscar consultores visíveis primeiro
+    const visibleConsultants = await User.find(consultantFilter).select('_id');
+    const consultantIds = visibleConsultants.map(c => c._id);
+
+    // Se não há consultores visíveis, retornar vazio
+    if (consultantIds.length === 0) {
+      return res.json({ allocations: [], grouped: {} });
+    }
+
+    // Filtrar alocações apenas dos consultores visíveis
+    query.consultantId = { $in: consultantIds };
+
     const allocations = await Allocation.find(query)
-      .populate('consultantId', 'name email profile functions')
+      .populate('consultantId', 'name email profile functions teams')
       .populate('projectId', 'projectId client projectName projectType')
       .populate('createdBy', 'name')
       .sort({ consultantId: 1, date: 1, timeSlot: 1 });

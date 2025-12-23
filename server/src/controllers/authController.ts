@@ -82,6 +82,14 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     // Generate token
     const token = generateToken(user);
 
+    // Buscar role com permissões populadas
+    const userWithRole = await User.findById(user._id)
+      .populate({
+        path: 'role',
+        populate: { path: 'permissions' }
+      })
+      .select('-password');
+
     res.json({
       message: 'Login realizado com sucesso',
       token,
@@ -90,7 +98,11 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         name: user.name,
         email: user.email,
         profile: user.profile,
+        role: userWithRole?.role || null,
         functions: user.functions,
+        teams: user.teams,
+        hasAgenda: user.hasAgenda,
+        active: user.active,
         mustChangePassword: user.mustChangePassword,
       },
     });
@@ -107,13 +119,25 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
       return res.status(401).json({ message: 'Não autorizado' });
     }
 
+    // Buscar role com permissões populadas
+    const userWithRole = await User.findById(user._id)
+      .populate({
+        path: 'role',
+        populate: { path: 'permissions' }
+      })
+      .select('-password');
+
     res.json({
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         profile: user.profile,
+        role: userWithRole?.role || null,
         functions: user.functions,
+        teams: user.teams,
+        hasAgenda: user.hasAgenda,
+        active: user.active,
         mustChangePassword: user.mustChangePassword,
       },
     });

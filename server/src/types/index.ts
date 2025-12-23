@@ -34,12 +34,40 @@ export type TimeSlot =
   | '18-20' 
   | '20-22';
 
+// RBAC - Permissões e Perfis
+export interface IPermission extends Document {
+  _id: Types.ObjectId;
+  name: string;
+  key: string;                    // Ex: "allocations.create"
+  resource: string;               // Ex: "allocations", "users"
+  action: string;                 // Ex: "create", "read", "update", "delete"
+  description?: string;
+  category: string;               // Ex: "Agenda", "Configurações"
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IRole extends Document {
+  _id: Types.ObjectId;
+  name: string;                   // Ex: "Administrador", "Gerente"
+  key: string;                    // Ex: "admin", "manager"
+  description?: string;
+  permissions: Types.ObjectId[];  // Referências para Permission
+  allowedTeams?: Types.ObjectId[]; // Equipes que este perfil pode ver na agenda
+  active: boolean;
+  isSystem: boolean;              // Perfis do sistema não podem ser deletados
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface IUser extends Document {
   _id: Types.ObjectId;
   name: string;
   email: string;
   password: string;
-  profile: UserProfile;           // Nível de acesso (admin/usuario)
+  profile: UserProfile;           // Nível de acesso (admin/usuario) - DEPRECATED, manter para compatibilidade
+  role?: Types.ObjectId;          // NOVO: Referência para Role
   functions: UserFunction[];      // Funções do consultor
   teams: Types.ObjectId[];        // Equipes que o usuário pertence
   hasAgenda: boolean;             // Se o usuário possui agenda (aparece no AgendaGrid)
