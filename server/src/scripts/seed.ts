@@ -399,43 +399,59 @@ async function seed() {
     console.log('👤 Created/updated admin user: admin@ngrglobal.com.br / Ngr@123');
 
     // Create users with team references - usar findOne + save para garantir hash da senha
-    const createdUsers = await Promise.all(
+    // Usar Promise.allSettled para continuar mesmo se alguns falharem
+    const userResults = await Promise.allSettled(
       users.map(async (u) => {
-        const teamIds = u.teams.map(teamName => teamMap.get(teamName)).filter(Boolean) as mongoose.Types.ObjectId[];
-        let user = await User.findOne({ email: u.email });
-        const userRoleId = roleMap.get(u.profile);
-        if (user) {
-          user.name = u.name;
-          user.password = 'Ngr@123'; // Será hasheado pelo pre-save hook
-          user.profile = u.profile as 'admin' | 'usuario';
-          user.role = userRoleId as any;
-          user.functions = u.functions as ('gerente' | 'import' | 'export' | 'cambio' | 'drawback' | 'recof' | 'suporte')[];
-          user.teams = teamIds;
-          user.hasAgenda = u.hasAgenda;
-          user.active = u.active;
-          user.mustChangePassword = u.mustChangePassword;
-          await user.save(); // Isso dispara o pre-save hook
-        } else {
-          user = await User.create({
-            name: u.name,
-            email: u.email,
-            password: 'Ngr@123',
-            profile: u.profile as 'admin' | 'usuario',
-            role: userRoleId,
-            functions: u.functions as ('gerente' | 'import' | 'export' | 'cambio' | 'drawback' | 'recof' | 'suporte')[],
-            teams: teamIds,
-            hasAgenda: u.hasAgenda,
-            active: u.active,
-            mustChangePassword: u.mustChangePassword,
-          });
+        try {
+          const teamIds = u.teams.map(teamName => teamMap.get(teamName)).filter(Boolean) as mongoose.Types.ObjectId[];
+          let user = await User.findOne({ email: u.email });
+          const userRoleId = roleMap.get(u.profile);
+          if (user) {
+            user.name = u.name;
+            user.password = 'Ngr@123'; // Será hasheado pelo pre-save hook
+            user.profile = u.profile as 'admin' | 'usuario';
+            user.role = userRoleId as any;
+            user.functions = u.functions as ('gerente' | 'import' | 'export' | 'cambio' | 'drawback' | 'recof' | 'suporte')[];
+            user.teams = teamIds;
+            user.hasAgenda = u.hasAgenda;
+            user.active = u.active;
+            user.mustChangePassword = u.mustChangePassword;
+            await user.save(); // Isso dispara o pre-save hook
+          } else {
+            user = await User.create({
+              name: u.name,
+              email: u.email,
+              password: 'Ngr@123',
+              profile: u.profile as 'admin' | 'usuario',
+              role: userRoleId,
+              functions: u.functions as ('gerente' | 'import' | 'export' | 'cambio' | 'drawback' | 'recof' | 'suporte')[],
+              teams: teamIds,
+              hasAgenda: u.hasAgenda,
+              active: u.active,
+              mustChangePassword: u.mustChangePassword,
+            });
+          }
+          return user;
+        } catch (err: any) {
+          console.error(`⚠️  Failed to create/update user ${u.email}:`, err.message);
+          throw err;
         }
-        return user;
       })
     );
+    
+    const createdUsers = userResults
+      .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+      .map(result => result.value);
+    
+    const failedUsers = userResults.filter(result => result.status === 'rejected');
+    if (failedUsers.length > 0) {
+      console.warn(`⚠️  Failed to create/update ${failedUsers.length} users`);
+    }
     console.log(`👥 Created/updated ${createdUsers.length} users (password: Ngr@123)`);
 
     // Create projects - usar upsert para evitar duplicação
-    const createdProjects = await Promise.all(
+    // Usar Promise.allSettled para continuar mesmo se alguns falharem
+    const projectResults = await Promise.allSettled(
       projects.map(p =>
         Project.findOneAndUpdate(
           { projectId: p.projectId },
@@ -452,6 +468,15 @@ async function seed() {
         )
       )
     );
+    
+    const createdProjects = projectResults
+      .filter((result): result is PromiseFulfilledResult<any> => result.status === 'fulfilled')
+      .map(result => result.value);
+    
+    const failedProjects = projectResults.filter(result => result.status === 'rejected');
+    if (failedProjects.length > 0) {
+      console.warn(`⚠️  Failed to create/update ${failedProjects.length} projects`);
+    }
     console.log(`📁 Created/updated ${createdProjects.length} projects`);
 
     // Create allocations from exported data

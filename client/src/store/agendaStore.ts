@@ -60,7 +60,9 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
 
   fetchConsultants: async (includeInactive = true) => {
     try {
-      const params = includeInactive ? {} : { active: true };
+      const params: any = includeInactive ? {} : { active: true };
+      // Adicionar forAgenda=true para aplicar filtro de equipes permitidas
+      params.forAgenda = 'true';
       const response = await usersAPI.getAll(params);
       set({ consultants: response.data.users });
     } catch (error: any) {

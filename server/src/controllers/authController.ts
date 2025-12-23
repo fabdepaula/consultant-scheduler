@@ -82,11 +82,14 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     // Generate token
     const token = generateToken(user);
 
-    // Buscar role com permissões populadas
+    // Buscar role com permissões e allowedTeams populadas
     const userWithRole = await User.findById(user._id)
       .populate({
         path: 'role',
-        populate: { path: 'permissions' }
+        populate: [
+          { path: 'permissions' },
+          { path: 'allowedTeams' }
+        ]
       })
       .select('-password');
 
@@ -119,11 +122,14 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
       return res.status(401).json({ message: 'Não autorizado' });
     }
 
-    // Buscar role com permissões populadas
+    // Buscar role com permissões e allowedTeams populadas
     const userWithRole = await User.findById(user._id)
       .populate({
         path: 'role',
-        populate: { path: 'permissions' }
+        populate: [
+          { path: 'permissions' },
+          { path: 'allowedTeams' }
+        ]
       })
       .select('-password');
 

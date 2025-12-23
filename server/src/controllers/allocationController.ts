@@ -91,15 +91,28 @@ export const getAgendaAllocations = async (req: Request, res: Response, next: Ne
       allowedTeamIds = await getAllowedTeamsForUser(userId);
     }
 
+    console.log('[getAgendaAllocations] Allowed teams:', {
+      userId,
+      allowedTeamIds,
+      isNull: allowedTeamIds === null,
+      length: allowedTeamIds?.length
+    });
+
     // Se o usuário tem restrição de equipes, filtrar consultores
     let consultantFilter: any = { active: true, hasAgenda: true };
     if (allowedTeamIds !== null) {
       // Se é array vazio, não pode ver nenhuma equipe
       if (allowedTeamIds.length === 0) {
+        console.log('[getAgendaAllocations] No allowed teams - returning empty');
         return res.json({ allocations: [], grouped: {} });
       }
+      // Converter IDs de string para ObjectId para comparação correta
+      const teamObjectIds = allowedTeamIds.map(id => new mongoose.Types.ObjectId(id));
+      console.log('[getAgendaAllocations] Filtering consultants by teams:', teamObjectIds);
       // Filtrar consultores que pertencem às equipes permitidas
-      consultantFilter.teams = { $in: allowedTeamIds };
+      consultantFilter.teams = { $in: teamObjectIds };
+    } else {
+      console.log('[getAgendaAllocations] No team restrictions (null) - showing all consultants');
     }
 
     const query: any = {
@@ -110,11 +123,24 @@ export const getAgendaAllocations = async (req: Request, res: Response, next: Ne
     };
 
     // Buscar consultores visíveis primeiro
-    const visibleConsultants = await User.find(consultantFilter).select('_id');
+    const visibleConsultants = await User.find(consultantFilter)
+      .select('_id name email teams')
+      .populate('teams', '_id name');
+    
+    console.log('[getAgendaAllocations] Visible consultants found:', {
+      count: visibleConsultants.length,
+      consultants: visibleConsultants.map(c => ({
+        id: c._id,
+        name: c.name,
+        teams: c.teams
+      }))
+    });
+    
     const consultantIds = visibleConsultants.map(c => c._id);
 
     // Se não há consultores visíveis, retornar vazio
     if (consultantIds.length === 0) {
+      console.log('[getAgendaAllocations] No visible consultants - returning empty');
       return res.json({ allocations: [], grouped: {} });
     }
 

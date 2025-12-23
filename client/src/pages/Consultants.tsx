@@ -16,8 +16,8 @@ import {
   Check
 } from 'lucide-react';
 import { useAgendaStore } from '../store/agendaStore';
-import { teamsAPI, functionConfigAPI } from '../services/api';
-import { User, UserProfile, UserFunction, Team, PROFILE_LABELS, FunctionConfig } from '../types';
+import { teamsAPI, functionConfigAPI, rolesAPI, usersAPI } from '../services/api';
+import { User, UserProfile, UserFunction, Team, PROFILE_LABELS, FunctionConfig, Role } from '../types';
 
 // Componente MultiSelect Dropdown
 interface MultiSelectProps<T extends string> {
@@ -123,7 +123,8 @@ interface ConsultantFormData {
   name: string;
   email: string;
   password: string;
-  profile: UserProfile;
+  profile: UserProfile; // Mantido para compatibilidade
+  role: string; // ID do role
   functions: UserFunction[];
   teams: string[];
   hasAgenda: boolean;
@@ -137,21 +138,55 @@ export default function Consultants() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
   const [availableFunctions, setAvailableFunctions] = useState<FunctionConfig[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [formData, setFormData] = useState<ConsultantFormData>({
     name: '',
     email: '',
     password: '',
-    profile: 'usuario',
+    profile: 'usuario', // Mantido para compatibilidade
+    role: '', // ID do role
     functions: [],
     teams: [],
     hasAgenda: false
   });
 
   useEffect(() => {
-    fetchConsultants();
+    fetchAllUsers(); // Usar função separada que não aplica filtro de equipes
     fetchTeams();
     fetchFunctions();
+    fetchRoles();
   }, []);
+
+  // Função separada para buscar todos os usuários (sem filtro de equipes)
+  const fetchAllUsers = async () => {
+    try {
+      const response = await usersAPI.getAll({}); // Não enviar forAgenda
+      useAgendaStore.setState({ consultants: response.data.users });
+    } catch (error: any) {
+      console.error('Error fetching users:', error);
+      useAgendaStore.setState({ error: error.response?.data?.message || 'Erro ao carregar usuários' });
+    }
+  };
+
+  const fetchRoles = async () => {
+    try {
+      console.log('[Consultants] Fetching roles...');
+      const response = await rolesAPI.getAll();
+      console.log('[Consultants] Roles response:', response.data);
+      // Filtrar apenas perfis ativos
+      const activeRoles = (response.data.roles || []).filter((r: Role) => r.active);
+      console.log('[Consultants] Active roles:', activeRoles);
+      setAvailableRoles(activeRoles);
+      if (activeRoles.length === 0) {
+        console.warn('[Consultants] Nenhum perfil ativo encontrado');
+      }
+    } catch (err: any) {
+      console.error('[Consultants] Error fetching roles:', err);
+      console.error('[Consultants] Error details:', err.response?.data || err.message);
+      // Em caso de erro, definir array vazio para evitar crash
+      setAvailableRoles([]);
+    }
+  };
 
   const fetchFunctions = async () => {
     try {
@@ -187,11 +222,14 @@ export default function Consultants() {
 
   const openCreateModal = () => {
     setEditingConsultant(null);
+    // Buscar role padrão "usuario" se existir
+    const defaultRole = availableRoles.find(r => r.key === 'usuario');
     setFormData({
       name: '',
       email: '',
       password: '',
-      profile: 'usuario',
+      profile: 'usuario', // Mantido para compatibilidade
+      role: defaultRole ? (defaultRole._id || defaultRole.id) : '',
       functions: [],
       teams: [],
       hasAgenda: false
@@ -205,11 +243,16 @@ export default function Consultants() {
     const teamIds = (consultant.teams || []).map(t => 
       typeof t === 'string' ? t : (t._id || t.id)
     );
+    // Extrair ID do role (pode vir como objeto ou string)
+    const roleId = consultant.role 
+      ? (typeof consultant.role === 'object' ? (consultant.role._id || consultant.role.id) : consultant.role)
+      : '';
     setFormData({
       name: consultant.name,
       email: consultant.email,
       password: '',
-      profile: consultant.profile,
+      profile: consultant.profile, // Mantido para compatibilidade
+      role: roleId,
       functions: consultant.functions || [],
       teams: teamIds,
       hasAgenda: consultant.hasAgenda || false
@@ -226,7 +269,8 @@ export default function Consultants() {
         const updateData: any = {
           name: formData.name,
           email: formData.email,
-          profile: formData.profile,
+          profile: formData.profile, // Mantido para compatibilidade
+          role: formData.role, // NOVO: enviar role
           functions: formData.functions,
           teams: formData.teams,
           hasAgenda: formData.hasAgenda
@@ -240,13 +284,15 @@ export default function Consultants() {
           name: formData.name,
           email: formData.email,
           password: formData.password || undefined, // Usa senha padrão se vazio
-          profile: formData.profile,
+          profile: formData.profile, // Mantido para compatibilidade
+          role: formData.role, // NOVO: enviar role
           functions: formData.functions,
           teams: formData.teams,
           hasAgenda: formData.hasAgenda
         });
       }
       setModalOpen(false);
+      fetchAllUsers(); // Recarregar lista sem filtro de equipes
     } catch (err) {
       console.error('Error saving consultant:', err);
     } finally {
@@ -259,6 +305,7 @@ export default function Consultants() {
     
     try {
       await deleteConsultant(consultant._id || consultant.id);
+      fetchAllUsers(); // Recarregar lista sem filtro de equipes
     } catch (err) {
       console.error('Error deleting consultant:', err);
     }
@@ -275,6 +322,7 @@ export default function Consultants() {
       }
 
       await updateConsultant(consultant._id || consultant.id, payload);
+      fetchAllUsers(); // Recarregar lista sem filtro de equipes
     } catch (err) {
       console.error('Error toggling consultant status:', err);
     }
@@ -284,6 +332,7 @@ export default function Consultants() {
     try {
       const newHasAgenda = !consultant.hasAgenda;
       await updateConsultant(consultant._id || consultant.id, { hasAgenda: newHasAgenda });
+      fetchAllUsers(); // Recarregar lista sem filtro de equipes
     } catch (err) {
       console.error('Error toggling consultant agenda:', err);
     }
@@ -295,6 +344,7 @@ export default function Consultants() {
     try {
       await updateConsultant(consultant._id || consultant.id, { resetPassword: true });
       alert('Senha resetada com sucesso! O usuário precisará trocar a senha no próximo login.');
+      fetchAllUsers(); // Recarregar lista sem filtro de equipes
     } catch (err) {
       console.error('Error resetting password:', err);
     }
@@ -564,16 +614,35 @@ export default function Consultants() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Perfil (Nível de Acesso)
+                  Perfil (Nível de Acesso) *
                 </label>
                 <select
-                  value={formData.profile}
-                  onChange={(e) => setFormData(prev => ({ ...prev, profile: e.target.value as UserProfile }))}
+                  value={formData.role}
+                  onChange={(e) => {
+                    console.log('[Consultants] Role changed:', e.target.value);
+                    setFormData(prev => ({ ...prev, role: e.target.value }));
+                  }}
                   className="select-field"
+                  required
                 >
-                  <option value="usuario">Usuário</option>
-                  <option value="admin">Administrador</option>
+                  <option value="">Selecione um perfil...</option>
+                  {(() => {
+                    console.log('[Consultants] Rendering select, availableRoles:', availableRoles);
+                    if (availableRoles.length === 0) {
+                      return <option value="" disabled>Carregando perfis...</option>;
+                    }
+                    return availableRoles.map((role) => (
+                      <option key={role._id || role.id} value={role._id || role.id}>
+                        {role.name} {role.isSystem && '(Sistema)'}
+                      </option>
+                    ));
+                  })()}
                 </select>
+                {formData.role && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    {availableRoles.find(r => (r._id || r.id) === formData.role)?.description || ''}
+                  </p>
+                )}
               </div>
 
               <MultiSelectDropdown

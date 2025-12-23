@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { getAllowedTeamsForUser } from '../services/teamVisibilityService.js';
 
@@ -35,17 +36,38 @@ export const getAllConsultants = async (req: Request, res: Response, next: NextF
 
     // Se for para agenda, aplicar filtro de equipes permitidas
     if (forAgenda === 'true' && req.user) {
-      const userId = req.user._id?.toString();
-      if (userId) {
-        const allowedTeamIds = await getAllowedTeamsForUser(userId);
-        if (allowedTeamIds !== null) {
-          if (allowedTeamIds.length === 0) {
-            // Não pode ver nenhuma equipe
-            return res.json({ users: [] });
+      try {
+        const userId = req.user._id?.toString();
+        if (userId) {
+          const allowedTeamIds = await getAllowedTeamsForUser(userId);
+          console.log('[getAllConsultants] Allowed teams for user:', {
+            userId,
+            allowedTeamIds,
+            isNull: allowedTeamIds === null,
+            length: allowedTeamIds?.length
+          });
+          
+          if (allowedTeamIds !== null) {
+            if (allowedTeamIds.length === 0) {
+              // Não pode ver nenhuma equipe
+              console.log('[getAllConsultants] No allowed teams - returning empty');
+              return res.json({ users: [] });
+            }
+            // Converter IDs de string para ObjectId para comparação correta
+            const teamObjectIds = allowedTeamIds
+              .filter(id => id && mongoose.Types.ObjectId.isValid(id))
+              .map(id => new mongoose.Types.ObjectId(id));
+            
+            console.log('[getAllConsultants] Filtering by teams:', teamObjectIds);
+            // Filtrar por equipes permitidas
+            query.teams = { $in: teamObjectIds };
+          } else {
+            console.log('[getAllConsultants] No team restrictions (null) - showing all consultants');
           }
-          // Filtrar por equipes permitidas
-          query.teams = { $in: allowedTeamIds };
         }
+      } catch (error: any) {
+        console.error('[getAllConsultants] Error applying team filter:', error);
+        // Em caso de erro, não aplicar filtro (mostrar todos)
       }
     }
     
@@ -74,7 +96,11 @@ export const getConsultantById = async (req: Request, res: Response, next: NextF
   try {
     const user = await User.findById(req.params.id)
       .select('-password')
-      .populate('teams', 'name');
+      .populate('teams', 'name')
+      .populate({
+        path: 'role',
+        populate: { path: 'permissions' }
+      });
     
     if (!user) {
       return res.status(404).json({ message: 'Usuário não encontrado' });
@@ -89,7 +115,7 @@ export const getConsultantById = async (req: Request, res: Response, next: NextF
 // Create new user (admin only)
 export const createConsultant = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email, password, profile, functions, teams, hasAgenda } = req.body;
+    const { name, email, password, profile, role, functions, teams, hasAgenda } = req.body;
 
     // Check if email already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
@@ -97,19 +123,30 @@ export const createConsultant = async (req: Request, res: Response, next: NextFu
       return res.status(400).json({ message: 'Email já cadastrado' });
     }
 
+    // Validar role se fornecido
+    if (role) {
+      const Role = (await import('../models/Role.js')).default;
+      const roleExists = await Role.findById(role);
+      if (!roleExists) {
+        return res.status(400).json({ message: 'Perfil (role) inválido' });
+      }
+    }
+
     const user = await User.create({
       name,
       email: email.toLowerCase(),
       password: password || DEFAULT_PASSWORD, // Senha padrão Ngr@123
-      profile: profile || 'usuario',
+      profile: profile || 'usuario', // Mantido para compatibilidade
+      role: role || undefined, // NOVO: usar role se fornecido
       functions: functions || [],
       teams: teams || [],
       hasAgenda: hasAgenda || false,
       mustChangePassword: true, // Sempre deve trocar senha no primeiro login
     });
 
-    // Populate teams for response
+    // Populate teams and role for response
     await user.populate('teams', 'name');
+    await user.populate('role', 'name key');
 
     res.status(201).json({
       message: 'Usuário criado com sucesso',
@@ -118,6 +155,7 @@ export const createConsultant = async (req: Request, res: Response, next: NextFu
         name: user.name,
         email: user.email,
         profile: user.profile,
+        role: user.role,
         functions: user.functions,
         teams: user.teams,
         hasAgenda: user.hasAgenda,
@@ -133,7 +171,7 @@ export const createConsultant = async (req: Request, res: Response, next: NextFu
 // Update user (admin only)
 export const updateConsultant = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, email, profile, functions, teams, hasAgenda, active, password, resetPassword } = req.body;
+    const { name, email, profile, role, functions, teams, hasAgenda, active, password, resetPassword } = req.body;
     const userId = req.params.id;
 
     const user = await User.findById(userId);
@@ -153,6 +191,19 @@ export const updateConsultant = async (req: Request, res: Response, next: NextFu
     if (name) user.name = name;
     if (email) user.email = email.toLowerCase();
     if (profile) user.profile = profile;
+    // Validar role se fornecido
+    if (role !== undefined) {
+      if (role) {
+        const Role = (await import('../models/Role.js')).default;
+        const roleExists = await Role.findById(role);
+        if (!roleExists) {
+          return res.status(400).json({ message: 'Perfil (role) inválido' });
+        }
+        user.role = role;
+      }
+      // Se role é null/empty, manter o atual
+    }
+
     if (functions !== undefined) user.functions = functions;
     if (teams !== undefined) user.teams = teams;
     if (hasAgenda !== undefined) user.hasAgenda = hasAgenda;
@@ -168,8 +219,9 @@ export const updateConsultant = async (req: Request, res: Response, next: NextFu
 
     await user.save();
     
-    // Populate teams for response
+    // Populate teams and role for response
     await user.populate('teams', 'name');
+    await user.populate('role', 'name key');
 
     res.json({
       message: 'Usuário atualizado com sucesso',

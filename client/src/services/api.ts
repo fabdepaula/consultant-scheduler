@@ -61,13 +61,14 @@ export const usersAPI = {
   getById: (id: string) =>
     api.get(`/users/${id}`),
   
-  create: (data: { name: string; email: string; password?: string; profile?: UserProfile; functions?: UserFunction[]; teams?: string[]; hasAgenda?: boolean }) =>
+  create: (data: { name: string; email: string; password?: string; profile?: UserProfile; role?: string; functions?: UserFunction[]; teams?: string[]; hasAgenda?: boolean }) =>
     api.post('/users', data),
   
   update: (id: string, data: Partial<{ 
     name: string; 
     email: string; 
     profile: UserProfile; 
+    role?: string;
     functions: UserFunction[]; 
     teams: string[];
     hasAgenda: boolean;

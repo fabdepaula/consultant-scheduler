@@ -7,47 +7,106 @@ import { IUser, IRole } from '../types/index.js';
  * @returns null se pode ver todas as equipes, array vazio se não pode ver nenhuma, ou array com IDs das equipes permitidas
  */
 export const getAllowedTeamsForUser = async (userId: string): Promise<string[] | null> => {
-  const user = await User.findById(userId).populate('role');
-
-  if (!user || !user.role) {
-    // Se não tem role, verifica profile antigo para compatibilidade
-    if (user?.profile === 'admin') {
-      return null; // Admin pode ver todas
-    }
-    return null; // Sem perfil = comportamento padrão (pode ver todas por enquanto)
-  }
-
-  const role = user.role as IRole;
-
-  // Se não tem restrição de equipes (undefined/null), pode ver todas
-  if (role.allowedTeams === undefined || role.allowedTeams === null) {
-    return null; // null/undefined = todas as equipes
-  }
-
-  // Se o array está vazio, significa que não pode ver nenhuma equipe
-  if (role.allowedTeams.length === 0) {
-    return []; // Array vazio = nenhuma equipe
-  }
-
-  // Verificar se todas as equipes ativas estão selecionadas
-  // Se sim, tratar como "sem restrição" (null)
-  const totalActiveTeams = await Team.countDocuments({ active: true });
-  const selectedTeamIds = role.allowedTeams.map(teamId => teamId.toString());
+  // Buscar role sem populate primeiro para ver o formato original
+  const userRaw = await User.findById(userId).select('role profile');
+  const roleId = userRaw?.role;
   
-  // Se o número de equipes selecionadas é igual ao total de equipes ativas,
-  // tratar como "sem restrição"
-  if (selectedTeamIds.length >= totalActiveTeams) {
-    // Verificar se realmente são todas as equipes ativas
-    const activeTeamIds = (await Team.find({ active: true }).select('_id')).map(t => t._id.toString());
-    const allTeamsSelected = activeTeamIds.every(id => selectedTeamIds.includes(id));
-    
-    if (allTeamsSelected) {
-      return null; // Todas as equipes selecionadas = sem restrição
-    }
+  // Agora buscar o role completo com allowedTeams
+  const user = await User.findById(userId).populate({
+    path: 'role',
+    populate: { path: 'allowedTeams' }
+  });
+
+  console.log('[teamVisibilityService] getUser:', {
+    userId,
+    hasUser: !!user,
+    hasRole: !!user?.role,
+    profile: user?.profile,
+    roleId: user?.role?._id,
+    roleName: user?.role ? (user.role as IRole).name : null,
+    allowedTeamsRaw: user?.role ? (user.role as IRole).allowedTeams : null,
+    allowedTeamsType: user?.role && (user.role as IRole).allowedTeams ? typeof (user.role as IRole).allowedTeams[0] : null,
+    allowedTeamsLength: user?.role ? (user.role as IRole).allowedTeams?.length : 0
+  });
+
+  if (!user) {
+    console.log('[teamVisibilityService] No user found');
+    return []; // Sem usuário = sem acesso (restrito)
   }
 
-  // Retorna apenas os IDs das equipes permitidas
-  return selectedTeamIds;
+  // PRIORIDADE: Se tem role, usar as configurações do role (mesmo que seja admin)
+  if (user.role) {
+    const role = user.role as IRole;
+
+    console.log('[teamVisibilityService] Role found:', {
+      roleId: role._id,
+      roleName: role.name,
+      allowedTeams: role.allowedTeams,
+      allowedTeamsType: typeof role.allowedTeams,
+      isArray: Array.isArray(role.allowedTeams),
+      length: role.allowedTeams?.length
+    });
+
+    // Se não tem restrição de equipes (undefined/null), NÃO pode ver nenhuma (restrito)
+    if (role.allowedTeams === undefined || role.allowedTeams === null) {
+      console.log('[teamVisibilityService] No allowedTeams (undefined/null) - returning []');
+      return []; // null/undefined = nenhuma equipe (restrito)
+    }
+
+    // Se o array está vazio, significa que não pode ver nenhuma equipe
+    if (role.allowedTeams.length === 0) {
+      console.log('[teamVisibilityService] Empty allowedTeams array - returning []');
+      return []; // Array vazio = nenhuma equipe
+    }
+
+    // Retorna apenas os IDs das equipes permitidas
+    const teamIds = role.allowedTeams.map((teamId: any) => {
+      console.log('[teamVisibilityService] Processing teamId:', {
+        teamId,
+        type: typeof teamId,
+        isObject: typeof teamId === 'object',
+        hasId: teamId?._id,
+        constructor: teamId?.constructor?.name
+      });
+      
+      // Se teamId é um objeto (populated Team), usar _id
+      if (typeof teamId === 'object' && teamId !== null) {
+        // Se tem _id (objeto Team populado)
+        if (teamId._id) {
+          const id = teamId._id.toString();
+          console.log('[teamVisibilityService] Extracted ID from populated Team:', id);
+          return id;
+        }
+        // Se é um ObjectId diretamente (mongoose.Types.ObjectId)
+        if (teamId.toString && typeof teamId.toString === 'function') {
+          const id = teamId.toString();
+          console.log('[teamVisibilityService] Extracted ID from ObjectId:', id);
+          return id;
+        }
+      }
+      // Se já é uma string
+      if (typeof teamId === 'string') {
+        console.log('[teamVisibilityService] Using string ID directly:', teamId);
+        return teamId;
+      }
+      // Último recurso: converter para string
+      const id = String(teamId);
+      console.log('[teamVisibilityService] Converted to string:', id);
+      return id;
+    }).filter(Boolean); // Remove valores nulos/undefined
+
+    console.log('[teamVisibilityService] Final team IDs:', teamIds);
+    return teamIds;
+  }
+
+  // FALLBACK: Se não tem role, verifica profile antigo para compatibilidade
+  if (user.profile === 'admin') {
+    console.log('[teamVisibilityService] Fallback: admin profile - returning null (all teams)');
+    return null; // Admin antigo pode ver todas
+  }
+
+  console.log('[teamVisibilityService] No role and not admin - returning []');
+  return []; // Sem role e não é admin = sem acesso (restrito)
 };
 
 /**

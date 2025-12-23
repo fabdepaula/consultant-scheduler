@@ -206,17 +206,18 @@ export default function Roles() {
   };
 
   const selectAllTeams = () => {
-    // Quando seleciona todas, enviar null para indicar "sem restrição"
+    // Quando seleciona todas, selecionar todas as equipes disponíveis
     setFormData(prev => ({
       ...prev,
-      allowedTeams: undefined, // undefined = todas as equipes (sem restrição)
+      allowedTeams: teams.map(t => t._id || t.id),
     }));
   };
 
   const clearTeams = () => {
+    // Quando limpa, restringir todas (nenhuma equipe visível)
     setFormData(prev => ({
       ...prev,
-      allowedTeams: undefined, // undefined = todas as equipes
+      allowedTeams: undefined, // undefined = nenhuma equipe (todas restritas)
     }));
   };
 
@@ -485,12 +486,12 @@ export default function Roles() {
                       onClick={clearTeams}
                       className="text-xs text-slate-500 hover:underline"
                     >
-                      Permitir todas (sem restrição)
+                      Limpar seleção (restringir todas)
                     </button>
                   </div>
                 </div>
                 <p className="text-xs text-slate-500 mb-2">
-                  Selecione as equipes que este perfil pode visualizar na agenda. Deixe sem seleção para permitir todas.
+                  Selecione as equipes que este perfil pode visualizar na agenda. Se nenhuma for selecionada, nenhuma equipe será visível.
                 </p>
                 <div className="border border-slate-200 rounded-lg p-3 max-h-48 overflow-y-auto">
                   {teams.length === 0 ? (
@@ -532,9 +533,9 @@ export default function Roles() {
                   )}
                 </div>
                 {(!formData.allowedTeams || formData.allowedTeams.length === 0) && (
-                  <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                    <Eye className="w-3 h-3" />
-                    Todas as equipes serão visíveis (sem restrição)
+                  <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                    <EyeOff className="w-3 h-3" />
+                    Nenhuma equipe será visível (todas restritas)
                   </p>
                 )}
                 {formData.allowedTeams && formData.allowedTeams.length > 0 && (
