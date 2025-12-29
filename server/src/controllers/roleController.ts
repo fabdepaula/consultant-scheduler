@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import Role from '../models/Role.js';
 import Permission from '../models/Permission.js';
 import Team from '../models/Team.js';
+import User from '../models/User.js';
 import mongoose from 'mongoose';
 import { IRole } from '../types/index.js';
 
@@ -223,7 +224,6 @@ export const deleteRole = async (req: Request, res: Response, next: NextFunction
     }
 
     // Verificar se há usuários usando este perfil
-    const User = (await import('../models/User.js')).default;
     const usersWithRole = await User.countDocuments({ role: role._id });
     
     if (usersWithRole > 0) {

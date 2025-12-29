@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
+import Role from '../models/Role.js';
 import { getAllowedTeamsForUser } from '../services/teamVisibilityService.js';
 
 const DEFAULT_PASSWORD = 'Ngr@123';
@@ -125,7 +126,6 @@ export const createConsultant = async (req: Request, res: Response, next: NextFu
 
     // Validar role se fornecido
     if (role) {
-      const Role = (await import('../models/Role.js')).default;
       const roleExists = await Role.findById(role);
       if (!roleExists) {
         return res.status(400).json({ message: 'Perfil (role) inválido' });
@@ -194,7 +194,6 @@ export const updateConsultant = async (req: Request, res: Response, next: NextFu
     // Validar role se fornecido
     if (role !== undefined) {
       if (role) {
-        const Role = (await import('../models/Role.js')).default;
         const roleExists = await Role.findById(role);
         if (!roleExists) {
           return res.status(400).json({ message: 'Perfil (role) inválido' });

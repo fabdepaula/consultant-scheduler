@@ -17,26 +17,15 @@ export const getAllowedTeamsForUser = async (userId: string): Promise<string[] |
     populate: { path: 'allowedTeams' }
   });
 
-  console.log('[teamVisibilityService] getUser:', {
-    userId,
-    hasUser: !!user,
-    hasRole: !!user?.role,
-    profile: user?.profile,
-    roleId: user?.role?._id,
-    roleName: user?.role ? (user.role as IRole).name : null,
-    allowedTeamsRaw: user?.role ? (user.role as IRole).allowedTeams : null,
-    allowedTeamsType: user?.role && (user.role as IRole).allowedTeams ? typeof (user.role as IRole).allowedTeams[0] : null,
-    allowedTeamsLength: user?.role ? (user.role as IRole).allowedTeams?.length : 0
-  });
-
   if (!user) {
     console.log('[teamVisibilityService] No user found');
     return []; // Sem usuário = sem acesso (restrito)
   }
 
   // PRIORIDADE: Se tem role, usar as configurações do role (mesmo que seja admin)
-  if (user.role) {
-    const role = user.role as IRole;
+  // Verificar se role está populado (não é apenas ObjectId)
+  if (user.role && typeof user.role === 'object' && '_id' in user.role) {
+    const role = user.role as unknown as IRole;
 
     console.log('[teamVisibilityService] Role found:', {
       roleId: role._id,

@@ -14,17 +14,22 @@ export const getUserPermissions = async (userId: string): Promise<string[]> => {
     return [];
   }
 
-  const role = user.role as IRole;
-  if (!role.permissions || !Array.isArray(role.permissions)) {
-    return [];
+  // Verificar se role está populado (não é apenas ObjectId)
+  if (typeof user.role === 'object' && '_id' in user.role) {
+    const role = user.role as unknown as IRole;
+    if (!role.permissions || !Array.isArray(role.permissions)) {
+      return [];
+    }
+
+    // Extrair as chaves das permissões ativas
+    const permissions = role.permissions
+      .filter((perm: IPermission) => perm.active)
+      .map((perm: IPermission) => perm.key);
+
+    return permissions;
   }
 
-  // Extrair as chaves das permissões ativas
-  const permissions = role.permissions
-    .filter((perm: IPermission) => perm.active)
-    .map((perm: IPermission) => perm.key);
-
-  return permissions;
+  return [];
 };
 
 /**
