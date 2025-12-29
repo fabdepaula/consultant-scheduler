@@ -6,6 +6,19 @@ echo "🚀 Iniciando deploy do Consultant Scheduler..."
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR" || exit
 
+# Detectar qual comando docker compose está disponível
+if command -v docker &> /dev/null && docker compose version &> /dev/null 2>&1; then
+    DOCKER_COMPOSE="docker compose"
+    echo "📦 Usando: docker compose (v2)"
+elif command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+    echo "📦 Usando: docker-compose (v1)"
+else
+    echo "❌ Docker Compose não está instalado!"
+    echo "💡 Instale Docker Compose ou atualize o Docker para a versão mais recente"
+    exit 1
+fi
+
 # Atualizar código do Git
 echo "📥 Atualizando código do repositório..."
 if [ -d ".git" ]; then
@@ -35,7 +48,7 @@ fi
 
 # Parar container existente
 echo "🛑 Parando container existente..."
-docker-compose down 2>/dev/null || true
+$DOCKER_COMPOSE down 2>/dev/null || true
 
 # Remover imagens antigas (opcional, descomente se quiser limpar)
 # echo "🧹 Limpando imagens antigas..."
@@ -43,7 +56,7 @@ docker-compose down 2>/dev/null || true
 
 # Build e start
 echo "🔨 Construindo e iniciando container..."
-docker-compose up -d --build
+$DOCKER_COMPOSE up -d --build
 
 # Verificar se o build foi bem-sucedido
 if [ $? -ne 0 ]; then
@@ -58,15 +71,15 @@ sleep 5
 # Mostrar status
 echo ""
 echo "📋 Status dos containers:"
-docker-compose ps
+$DOCKER_COMPOSE ps
 
 # Mostrar últimas linhas dos logs
 echo ""
 echo "📋 Últimas linhas dos logs:"
-docker-compose logs --tail=30
+$DOCKER_COMPOSE logs --tail=30
 
 echo ""
 echo "✅ Deploy concluído!"
 echo "🌐 Aplicação rodando em http://localhost:3001"
-echo "📊 Para ver os logs em tempo real: docker-compose logs -f"
+echo "📊 Para ver os logs em tempo real: $DOCKER_COMPOSE logs -f"
 
