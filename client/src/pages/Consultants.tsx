@@ -131,7 +131,7 @@ interface ConsultantFormData {
 }
 
 export default function Consultants() {
-  const { consultants, fetchConsultants, createConsultant, updateConsultant, deleteConsultant, error, clearError } = useAgendaStore();
+  const { consultants, createConsultant, updateConsultant, deleteConsultant, error, clearError } = useAgendaStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingConsultant, setEditingConsultant] = useState<User | null>(null);

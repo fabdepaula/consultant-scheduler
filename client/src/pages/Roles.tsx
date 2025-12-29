@@ -7,9 +7,7 @@ import {
   X,
   Save,
   Check,
-  Users2,
   Lock,
-  Eye,
   EyeOff
 } from 'lucide-react';
 import { rolesAPI, permissionsAPI, teamsAPI } from '../services/api';

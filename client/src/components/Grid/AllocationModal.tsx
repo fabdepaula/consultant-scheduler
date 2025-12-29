@@ -50,13 +50,6 @@ export default function AllocationModal({
   // Determinar se pode editar baseado em permissões
   // Se isAdmin foi passado como prop, usar ele (compatibilidade)
   // Caso contrário, verificar permissões
-  const canEdit = isAdmin !== undefined 
-    ? isAdmin 
-    : hasPermission('allocations.create') || hasPermission('allocations.update');
-  
-  // Determinar se pode editar baseado em permissões
-  // Se isAdmin foi passado como prop, usar ele (compatibilidade)
-  // Caso contrário, verificar permissões
   const effectiveIsAdmin = isAdmin !== undefined 
     ? isAdmin 
     : hasPermission('allocations.create') || hasPermission('allocations.update');
