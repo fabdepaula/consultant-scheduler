@@ -21,8 +21,19 @@ export const getUserPermissions = async (userId: string): Promise<string[]> => {
       return [];
     }
 
-    // Extrair as chaves das permissões ativas
-    const permissions = role.permissions
+    // Verificar se permissions está populado (é IPermission[]) ou não (é ObjectId[])
+    // Se o primeiro elemento tem a propriedade 'key', está populado
+    const isPopulated = role.permissions.length > 0 && 
+      typeof role.permissions[0] === 'object' && 
+      'key' in (role.permissions[0] as any);
+
+    if (!isPopulated) {
+      // Se não está populado, retornar array vazio (não temos as informações necessárias)
+      return [];
+    }
+
+    // Extrair as chaves das permissões ativas (agora sabemos que são IPermission[])
+    const permissions = (role.permissions as unknown as IPermission[])
       .filter((perm: IPermission) => perm.active)
       .map((perm: IPermission) => perm.key);
 
