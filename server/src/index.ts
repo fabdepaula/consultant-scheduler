@@ -44,10 +44,16 @@ if (process.env.NODE_ENV === 'production') {
   const clientDistPath = path.join(process.cwd(), 'client', 'dist');
   
   if (fs.existsSync(clientDistPath)) {
-    app.use(express.static(clientDistPath));
+    // Servir arquivos estáticos com base /agenda
+    app.use('/agenda', express.static(clientDistPath));
     
-    // Todas as rotas que não são /api devem servir o index.html
-    app.get('*', (req, res) => {
+    // Rota /agenda serve o index.html
+    app.get('/agenda', (req, res) => {
+      res.sendFile(path.join(clientDistPath, 'index.html'));
+    });
+    
+    // Rotas SPA dentro de /agenda (para React Router)
+    app.get('/agenda/*', (req, res) => {
       if (req.path.startsWith('/api')) {
         return res.status(404).json({ message: 'Rota não encontrada' });
       }

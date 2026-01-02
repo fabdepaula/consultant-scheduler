@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { UserFunction, UserProfile } from '../types';
 
+// Em produção, usa /agenda/api. Em desenvolvimento, usa /api
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.PROD ? '/agenda/api' : '/api',
   headers: {
     'Content-Type': 'application/json',
   },
