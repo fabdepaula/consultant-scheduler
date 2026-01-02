@@ -114,7 +114,7 @@ function App() {
   }, [initialized, checkAuth]);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.PROD ? '/agenda' : undefined}>
       <Routes>
         <Route path="/login" element={
           <PublicRoute>
