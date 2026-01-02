@@ -19,7 +19,12 @@ passport.use(
     },
     async (email, password, done) => {
       try {
-        const user = await User.findOne({ email: email.toLowerCase() });
+        // Popular role e suas permissões para verificação de permissões
+        const user = await User.findOne({ email: email.toLowerCase() })
+          .populate({
+            path: 'role',
+            populate: { path: 'permissions' }
+          });
         
         if (!user) {
           return done(null, false, { message: 'Email não encontrado' });
@@ -52,7 +57,12 @@ passport.use(
     },
     async (jwtPayload, done) => {
       try {
-        const user = await User.findById(jwtPayload.id);
+        // Popular role e suas permissões para verificação de permissões
+        const user = await User.findById(jwtPayload.id)
+          .populate({
+            path: 'role',
+            populate: { path: 'permissions' }
+          });
         
         if (!user) {
           return done(null, false);

@@ -229,6 +229,7 @@ export const updateConsultant = async (req: Request, res: Response, next: NextFu
         name: user.name,
         email: user.email,
         profile: user.profile,
+        role: user.role, // NOVO: incluir role na resposta
         functions: user.functions,
         teams: user.teams,
         hasAgenda: user.hasAgenda,

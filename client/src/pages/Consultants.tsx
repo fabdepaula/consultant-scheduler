@@ -247,6 +247,14 @@ export default function Consultants() {
     const roleId = consultant.role 
       ? (typeof consultant.role === 'object' ? (consultant.role._id || consultant.role.id) : consultant.role)
       : '';
+    
+    console.log('[Consultants] openEditModal - consultant:', {
+      name: consultant.name,
+      profile: consultant.profile,
+      role: consultant.role,
+      roleId: roleId
+    });
+    
     setFormData({
       name: consultant.name,
       email: consultant.email,
@@ -480,15 +488,28 @@ export default function Consultants() {
                     </button>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`
-                      px-2 py-1 rounded text-xs font-medium
-                      ${consultant.profile === 'admin' 
-                        ? 'bg-purple-100 text-purple-700' 
-                        : 'bg-slate-100 text-slate-600'
-                      }
-                    `}>
-                      {PROFILE_LABELS[consultant.profile] || consultant.profile}
-                    </span>
+                    {(() => {
+                      // Priorizar role (novo sistema) sobre profile (antigo)
+                      const roleName = consultant.role 
+                        ? (typeof consultant.role === 'object' ? consultant.role.name : '')
+                        : null;
+                      const profileLabel = roleName || PROFILE_LABELS[consultant.profile] || consultant.profile;
+                      const isAdmin = consultant.profile === 'admin' || 
+                        (typeof consultant.role === 'object' && consultant.role?.key === 'admin') ||
+                        (typeof consultant.role === 'string' && consultant.role === 'admin');
+                      
+                      return (
+                        <span className={`
+                          px-2 py-1 rounded text-xs font-medium
+                          ${isAdmin
+                            ? 'bg-purple-100 text-purple-700' 
+                            : 'bg-slate-100 text-slate-600'
+                          }
+                        `}>
+                          {profileLabel}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4">
                     <button

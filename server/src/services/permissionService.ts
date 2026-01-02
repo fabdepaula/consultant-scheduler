@@ -47,14 +47,46 @@ export const getUserPermissions = async (userId: string): Promise<string[]> => {
  * Verifica se o usuário tem uma permissão específica
  */
 export const hasPermission = async (userId: string, permissionKey: string): Promise<boolean> => {
+  const user = await User.findById(userId);
+  
+  if (!user) {
+    console.log(`[hasPermission] User ${userId} not found`);
+    return false;
+  }
+
+  // Fallback: Se é admin antigo (sem role), tem todas as permissões
+  if (!user.role && user.profile === 'admin') {
+    console.log(`[hasPermission] User ${userId} is old admin - granting all permissions`);
+    return true;
+  }
+
+  if (!user.role) {
+    console.log(`[hasPermission] User ${userId} has no role assigned`);
+    return false;
+  }
+
   const permissions = await getUserPermissions(userId);
-  return permissions.includes(permissionKey);
+  console.log(`[hasPermission] User ${userId} permissions:`, permissions, `Checking for: ${permissionKey}`);
+  const hasAccess = permissions.includes(permissionKey);
+  console.log(`[hasPermission] User ${userId} has permission ${permissionKey}:`, hasAccess);
+  return hasAccess;
 };
 
 /**
  * Verifica se o usuário tem pelo menos uma das permissões fornecidas (OR)
  */
 export const hasAnyPermission = async (userId: string, permissionKeys: string[]): Promise<boolean> => {
+  const user = await User.findById(userId);
+  
+  if (!user) {
+    return false;
+  }
+
+  // Fallback: Se é admin antigo (sem role), tem todas as permissões
+  if (!user.role && user.profile === 'admin') {
+    return true;
+  }
+
   const permissions = await getUserPermissions(userId);
   return permissionKeys.some(key => permissions.includes(key));
 };

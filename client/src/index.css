@@ -119,6 +119,33 @@ body {
          focus:outline-none focus:border-ngr-secondary focus:ring-2 focus:ring-ngr-secondary/20
          placeholder:text-slate-400
          disabled:opacity-100 disabled:cursor-not-allowed;
+  position: relative;
+}
+
+/* Desabilitar completamente validação visual padrão do navegador */
+.input-field:invalid {
+  @apply border-slate-300;
+  box-shadow: none;
+  outline: none !important;
+}
+
+.input-field:invalid:focus {
+  @apply border-ngr-secondary focus:ring-2 focus:ring-ngr-secondary/20;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Remover qualquer estilo de validação do navegador */
+.input-field:required:invalid {
+  @apply border-slate-300;
+  box-shadow: none;
+  outline: none !important;
+}
+
+.input-field:required:invalid:focus {
+  @apply border-ngr-secondary focus:ring-2 focus:ring-ngr-secondary/20;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .select-field {
