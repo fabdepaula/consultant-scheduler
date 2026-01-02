@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
+import { usePermissions } from '../../hooks/usePermissions';
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Para mobile
@@ -27,6 +28,7 @@ export default function Layout() {
     return saved ? saved === 'true' : false;
   });
   const { user, logout } = useAuthStore();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
   // Salvar preferência no localStorage
@@ -39,20 +41,27 @@ export default function Layout() {
     navigate('/login');
   };
 
+  // Verificar permissões usando RBAC (com fallback para admin antigo)
   const isAdmin = user?.profile === 'admin';
+  const canManageUsers = isAdmin || hasPermission('users.manage') || hasPermission('users.view');
+  const canManageProjects = isAdmin || hasPermission('projects.manage') || hasPermission('projects.view') || hasPermission('projects.create');
+  const canManageFunctions = isAdmin || hasPermission('functions.manage');
+  const canManageTeams = isAdmin || hasPermission('teams.manage');
+  const canManageStatus = isAdmin || hasPermission('status.manage');
+  const canManageRoles = isAdmin || hasPermission('roles.manage');
+  const canViewExternalData = isAdmin || hasPermission('externalData.view');
+  const canManageMiddleware = isAdmin || hasPermission('middleware.manage');
 
   const navItems = [
     { to: '/', icon: Calendar, label: 'Agenda' },
-    ...(isAdmin ? [
-      { to: '/consultores', icon: Users, label: 'Usuários' },
-      { to: '/projetos', icon: FolderKanban, label: 'Projetos' },
-      { to: '/funcoes', icon: Settings, label: 'Funções' },
-      { to: '/equipes', icon: Users2, label: 'Equipes' },
-      { to: '/status', icon: Palette, label: 'Status' },
-      { to: '/perfis', icon: Shield, label: 'Perfis' },
-      { to: '/dados-externos', icon: Database, label: 'Dados Externos' },
-      { to: '/middleware', icon: Activity, label: 'Middleware' },
-    ] : []),
+    ...(canManageUsers ? [{ to: '/consultores', icon: Users, label: 'Usuários' }] : []),
+    ...(canManageProjects ? [{ to: '/projetos', icon: FolderKanban, label: 'Projetos' }] : []),
+    ...(canManageFunctions ? [{ to: '/funcoes', icon: Settings, label: 'Funções' }] : []),
+    ...(canManageTeams ? [{ to: '/equipes', icon: Users2, label: 'Equipes' }] : []),
+    ...(canManageStatus ? [{ to: '/status', icon: Palette, label: 'Status' }] : []),
+    ...(canManageRoles ? [{ to: '/perfis', icon: Shield, label: 'Perfis' }] : []),
+    ...(canViewExternalData ? [{ to: '/dados-externos', icon: Database, label: 'Dados Externos' }] : []),
+    ...(canManageMiddleware ? [{ to: '/middleware', icon: Activity, label: 'Middleware' }] : []),
   ];
 
   return (

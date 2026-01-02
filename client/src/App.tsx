@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
+import { usePermissions } from './hooks/usePermissions';
 import Login from './pages/Login';
 import ChangePassword from './pages/ChangePassword';
 import Dashboard from './pages/Dashboard';
@@ -83,6 +84,66 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Componente de rota baseado em permissões (RBAC)
+function PermissionRoute({ 
+  children, 
+  permission, 
+  anyPermission 
+}: { 
+  children: React.ReactNode;
+  permission?: string;
+  anyPermission?: string[];
+}) {
+  const { user, isAuthenticated, initialized } = useAuthStore();
+  const { hasPermission, hasAnyPermission, permissions, loading } = usePermissions();
+
+  if (!initialized || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-ngr-secondary"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Fallback: admin antigo tem acesso a tudo
+  if (user?.profile === 'admin' && !user?.role) {
+    return <>{children}</>;
+  }
+
+  // Debug: log das permissões
+  console.log('[PermissionRoute] User:', user?.email);
+  console.log('[PermissionRoute] Permissions:', permissions);
+  console.log('[PermissionRoute] Checking permission:', permission);
+  console.log('[PermissionRoute] Checking anyPermission:', anyPermission);
+
+  // Verificar permissão específica
+  if (permission) {
+    const hasAccess = hasPermission(permission);
+    console.log('[PermissionRoute] hasPermission result:', hasAccess);
+    if (!hasAccess) {
+      console.log('[PermissionRoute] Access denied - redirecting to /');
+      return <Navigate to="/" replace />;
+    }
+  }
+
+  // Verificar qualquer uma das permissões
+  if (anyPermission && anyPermission.length > 0) {
+    const hasAccess = hasAnyPermission(...anyPermission);
+    console.log('[PermissionRoute] hasAnyPermission result:', hasAccess);
+    if (!hasAccess) {
+      console.log('[PermissionRoute] Access denied - redirecting to /');
+      return <Navigate to="/" replace />;
+    }
+  }
+
+  console.log('[PermissionRoute] Access granted');
+  return <>{children}</>;
+}
+
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, initialized, mustChangePassword } = useAuthStore();
 
@@ -139,44 +200,44 @@ function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="consultores" element={
-            <AdminRoute>
+            <PermissionRoute anyPermission={['users.manage', 'users.view']}>
               <Consultants />
-            </AdminRoute>
+            </PermissionRoute>
           } />
           <Route path="projetos" element={
-            <AdminRoute>
+            <PermissionRoute anyPermission={['projects.manage', 'projects.view', 'projects.create']}>
               <Projects />
-            </AdminRoute>
+            </PermissionRoute>
           } />
           <Route path="funcoes" element={
-            <AdminRoute>
+            <PermissionRoute permission="functions.manage">
               <Functions />
-            </AdminRoute>
+            </PermissionRoute>
           } />
           <Route path="status" element={
-            <AdminRoute>
+            <PermissionRoute permission="status.manage">
               <StatusConfig />
-            </AdminRoute>
+            </PermissionRoute>
           } />
           <Route path="equipes" element={
-            <AdminRoute>
+            <PermissionRoute permission="teams.manage">
               <Teams />
-            </AdminRoute>
+            </PermissionRoute>
           } />
           <Route path="dados-externos" element={
-            <AdminRoute>
+            <PermissionRoute permission="externalData.view">
               <ExternalData />
-            </AdminRoute>
+            </PermissionRoute>
           } />
           <Route path="middleware" element={
-            <AdminRoute>
+            <PermissionRoute permission="middleware.manage">
               <Middleware />
-            </AdminRoute>
+            </PermissionRoute>
           } />
           <Route path="perfis" element={
-            <AdminRoute>
+            <PermissionRoute permission="roles.manage">
               <Roles />
-            </AdminRoute>
+            </PermissionRoute>
           } />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
