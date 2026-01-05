@@ -62,28 +62,6 @@ function RequirePasswordChange({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, initialized } = useAuthStore();
-
-  if (!initialized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-ngr-secondary"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user?.profile !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
-
-  return <>{children}</>;
-}
-
 // Componente de rota baseado em permissões (RBAC)
 function PermissionRoute({ 
   children, 
