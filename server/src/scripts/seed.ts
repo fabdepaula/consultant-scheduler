@@ -78,7 +78,12 @@ const permissions = [
   
   // Dados e Integrações
   { key: 'external-data.view', name: 'Visualizar Dados Externos', resource: 'external-data', action: 'view', category: 'Dados', description: 'Permite visualizar dados externos' },
-  { key: 'middleware.manage', name: 'Gerenciar Interfaces', resource: 'middleware', action: 'manage', category: 'Dados', description: 'Permite gerenciar interfaces/middleware' },
+  
+  // Middleware
+  { key: 'middleware.view', name: 'Visualizar Middleware', resource: 'middleware', action: 'view', category: 'Middleware', description: 'Permite visualizar interfaces/middleware' },
+  { key: 'middleware.create', name: 'Nova Interface', resource: 'middleware', action: 'create', category: 'Middleware', description: 'Permite criar novas interfaces/middleware' },
+  { key: 'middleware.update', name: 'Editar Interface', resource: 'middleware', action: 'update', category: 'Middleware', description: 'Permite editar interfaces/middleware existentes' },
+  { key: 'middleware.execute', name: 'Executar Interface', resource: 'middleware', action: 'execute', category: 'Middleware', description: 'Permite executar interfaces/middleware' },
 ];
 
 // Usuários - todos com senha padrão Ngr@123

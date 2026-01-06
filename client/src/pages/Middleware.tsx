@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { middlewareAPI, externalDataAPI } from '../services/api';
+import { usePermissions } from '../hooks/usePermissions';
 import {
   Database,
   RefreshCw,
@@ -108,7 +109,11 @@ const defaultForm: DataSyncConfig = {
 };
 
 export default function Middleware() {
-  // const { user } = useAuthStore(); // Não usado no momento
+  const { hasPermission } = usePermissions();
+  const canCreate = hasPermission('middleware.create');
+  const canUpdate = hasPermission('middleware.update');
+  const canExecute = hasPermission('middleware.execute');
+  
   const [configs, setConfigs] = useState<DataSyncConfig[]>([]);
   const [views, setViews] = useState<ViewOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +123,9 @@ export default function Middleware() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<DataSyncConfig>(defaultForm);
+  
+  // Determinar se pode editar (criar ou atualizar)
+  const canEdit = editingId ? canUpdate : canCreate;
   
   // Campos disponíveis
   const [sourceFields, setSourceFields] = useState<string[]>([]);
@@ -716,7 +724,9 @@ export default function Middleware() {
             resetForm();
             setFormOpen(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-ngr-primary text-white rounded-lg hover:bg-ngr-secondary transition-colors"
+          disabled={!canCreate}
+          className="flex items-center gap-2 px-4 py-2 bg-ngr-primary text-white rounded-lg hover:bg-ngr-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title={!canCreate ? 'Você não tem permissão para criar novas interfaces' : ''}
         >
           <Plus className="w-4 h-4" />
           Nova Interface
@@ -797,13 +807,15 @@ export default function Middleware() {
                     <button
                       onClick={() => handleEdit(config)}
                       className="px-3 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50"
+                      title={!canUpdate ? 'Você pode visualizar, mas não pode editar' : 'Editar configuração'}
                     >
-                      Editar
+                      {canUpdate ? 'Editar' : 'Visualizar'}
                     </button>
                     <button
                       onClick={() => handleExecute(config._id!)}
-                      disabled={executingId === config._id}
+                      disabled={executingId === config._id || !canExecute}
                       className="px-3 py-2 text-sm bg-ngr-primary text-white rounded-lg hover:bg-ngr-secondary transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      title={!canExecute ? 'Você não tem permissão para executar interfaces' : 'Executar interface'}
                     >
                       {executingId === config._id ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -858,9 +870,11 @@ export default function Middleware() {
             <div className="flex items-center justify-between p-5 border-b border-slate-200">
               <div>
                 <h2 className="text-lg font-bold text-slate-800">
-                  {editingId ? 'Editar configuração' : 'Nova configuração'}
+                  {editingId ? (canUpdate ? 'Editar configuração' : 'Visualizar configuração') : 'Nova configuração'}
                 </h2>
-                <p className="text-sm text-slate-500">Defina origem, destino, mapeamento e agendamento.</p>
+                <p className="text-sm text-slate-500">
+                  {!canEdit && editingId ? 'Você pode visualizar, mas não pode editar esta configuração.' : 'Defina origem, destino, mapeamento e agendamento.'}
+                </p>
               </div>
               <button onClick={resetForm} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -897,17 +911,19 @@ export default function Middleware() {
                 <div>
                   <label className="text-sm font-medium text-slate-700">Nome *</label>
                   <input
-                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    disabled={!canEdit}
                   />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-700">Descrição</label>
                   <input
-                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                     value={form.description || ''}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    disabled={!canEdit}
                   />
                 </div>
               </div>
@@ -916,13 +932,14 @@ export default function Middleware() {
                 <div>
                   <label className="text-sm font-medium text-slate-700">View de origem *</label>
                   <select
-                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                     value={form.sourceView}
                     onChange={(e) => {
                       const viewName = e.target.value;
                       setForm({ ...form, sourceView: viewName, sourceKeyField: '' });
                       fetchSourceFields(viewName);
                     }}
+                    disabled={!canEdit}
                   >
                     <option value="">Selecione...</option>
                     {views.map((v) => (
@@ -933,7 +950,7 @@ export default function Middleware() {
                 <div>
                   <label className="text-sm font-medium text-slate-700">Destino *</label>
                   <select
-                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                     value={form.targetCollection}
                     onChange={(e) => {
                       const tc = e.target.value as DataSyncConfig['targetCollection'];
@@ -949,6 +966,7 @@ export default function Middleware() {
                         targetKeyField: newFields.includes(form.targetKeyField) ? form.targetKeyField : '',
                       });
                     }}
+                    disabled={!canEdit}
                   >
                     <option value="projects">Projects</option>
                     <option value="users">Users</option>
@@ -958,9 +976,10 @@ export default function Middleware() {
                 <div>
                   <label className="text-sm font-medium text-slate-700">API de destino *</label>
                   <input
-                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                     value={form.targetApi}
                     onChange={(e) => setForm({ ...form, targetApi: e.target.value })}
+                    disabled={!canEdit}
                   />
                   <p className="text-[11px] text-slate-500 mt-1">Usaremos POST/PUT para upsert via API.</p>
                 </div>
@@ -970,10 +989,10 @@ export default function Middleware() {
                 <div>
                   <label className="text-sm font-medium text-slate-700">Campo chave na origem *</label>
                   <select
-                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                     value={form.sourceKeyField}
                     onChange={(e) => setForm({ ...form, sourceKeyField: e.target.value })}
-                    disabled={!form.sourceView || loadingSourceFields}
+                    disabled={!canEdit || !form.sourceView || loadingSourceFields}
                   >
                     <option value="">{loadingSourceFields ? 'Carregando...' : 'Selecione o campo'}</option>
                     {sourceFields.map((field) => (
@@ -984,10 +1003,10 @@ export default function Middleware() {
                 <div>
                   <label className="text-sm font-medium text-slate-700">Campo chave no destino *</label>
                   <select
-                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                     value={form.targetKeyField}
                     onChange={(e) => setForm({ ...form, targetKeyField: e.target.value })}
-                    disabled={!form.targetCollection}
+                    disabled={!canEdit || !form.targetCollection}
                   >
                     <option value="">Selecione o campo</option>
                     {targetFields.map((field) => (
@@ -1000,10 +1019,11 @@ export default function Middleware() {
               <div>
                 <label className="text-sm font-medium text-slate-700">Filtro SQL (cláusula WHERE)</label>
                 <input
-                  className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                   placeholder="Ex.: status = 'ativo' AND tipo = 'X'"
                   value={form.filterClause || ''}
                   onChange={(e) => setForm({ ...form, filterClause: e.target.value })}
+                  disabled={!canEdit}
                 />
                 <p className="text-[11px] text-slate-500 mt-1">Apenas WHERE. Comandos perigosos são bloqueados.</p>
               </div>
@@ -1014,8 +1034,9 @@ export default function Middleware() {
                   <p className="text-sm font-semibold text-slate-700">Mapeamento de campos</p>
                   <button
                     onClick={addMappingRow}
-                    className="flex items-center gap-1 text-sm text-ngr-primary"
+                    className="flex items-center gap-1 text-sm text-ngr-primary disabled:opacity-50 disabled:cursor-not-allowed"
                     type="button"
+                    disabled={!canEdit}
                   >
                     <Plus className="w-4 h-4" /> Adicionar
                   </button>
@@ -1027,10 +1048,10 @@ export default function Middleware() {
                         <div>
                           <label className="text-xs font-medium text-slate-700">Campo origem</label>
                           <select
-                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                             value={m.sourceField}
                             onChange={(e) => updateMappingField(idx, 'sourceField', e.target.value)}
-                            disabled={!form.sourceView || loadingSourceFields}
+                            disabled={!canEdit || !form.sourceView || loadingSourceFields}
                           >
                             <option value="">{loadingSourceFields ? 'Carregando...' : 'Selecione o campo'}</option>
                             {sourceFields.map((field) => (
@@ -1041,10 +1062,10 @@ export default function Middleware() {
                         <div>
                           <label className="text-xs font-medium text-slate-700">Campo destino</label>
                           <select
-                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                             value={m.targetField}
                             onChange={(e) => updateMappingField(idx, 'targetField', e.target.value)}
-                            disabled={!form.targetCollection}
+                            disabled={!canEdit || !form.targetCollection}
                           >
                             <option value="">Selecione o campo</option>
                             {targetFields.map((field) => (
@@ -1055,9 +1076,10 @@ export default function Middleware() {
                         <div>
                           <label className="text-xs font-medium text-slate-700">Se registro existir</label>
                           <select
-                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                             value={m.updateBehavior || 'update'}
                             onChange={(e) => updateMappingField(idx, 'updateBehavior', e.target.value as 'update' | 'keep')}
+                            disabled={!canEdit}
                           >
                             <option value="update">Atualiza</option>
                             <option value="keep">Mantém</option>
@@ -1069,8 +1091,9 @@ export default function Middleware() {
                         <div className="flex items-end justify-end">
                           <button
                             onClick={() => removeMappingRow(idx)}
-                            className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1"
+                            className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                             type="button"
+                            disabled={!canEdit}
                           >
                             <Trash2 className="w-4 h-4" /> Remover
                           </button>
@@ -1086,7 +1109,8 @@ export default function Middleware() {
                                 key={t}
                                 type="button"
                                 onClick={() => toggleTransform(idx, t)}
-                                className={`px-2 py-1 rounded border text-[11px] ${
+                                disabled={!canEdit}
+                                className={`px-2 py-1 rounded border text-[11px] disabled:opacity-50 disabled:cursor-not-allowed ${
                                   m.transforms.includes(t)
                                     ? 'bg-ngr-primary text-white border-ngr-primary'
                                     : 'border-slate-200 text-slate-600 hover:border-slate-300'
@@ -1100,7 +1124,7 @@ export default function Middleware() {
                         <div>
                           <label className="text-xs font-medium text-slate-700">Valor padrão (defaultValue)</label>
                           <input
-                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                             value={m.defaultValue || ''}
                             onChange={(e) => {
                               updateMappingField(idx, 'defaultValue', e.target.value);
@@ -1108,12 +1132,13 @@ export default function Middleware() {
                                 toggleTransform(idx, 'defaultValue');
                               }
                             }}
+                            disabled={!canEdit}
                           />
                         </div>
                         <div>
                           <label className="text-xs font-medium text-slate-700">Mapeamento de valores (from=to, um por linha)</label>
                           <textarea
-                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                             rows={3}
                             value={m.mapLines || ''}
                             onChange={(e) => {
@@ -1122,6 +1147,7 @@ export default function Middleware() {
                                 toggleTransform(idx, 'mapValue');
                               }
                             }}
+                            disabled={!canEdit}
                           />
                         </div>
                       </div>
@@ -1137,12 +1163,13 @@ export default function Middleware() {
                   <div>
                     <label className="text-xs font-medium text-slate-700">Modo</label>
                     <select
-                      className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                      className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                       value={form.schedule?.mode || 'none'}
                       onChange={(e) => setForm({
                         ...form,
                         schedule: { ...form.schedule, mode: e.target.value as ScheduleMode },
                       })}
+                      disabled={!canEdit}
                     >
                       <option value="none">Sem agendamento</option>
                       <option value="cron">Cron</option>
@@ -1153,13 +1180,14 @@ export default function Middleware() {
                     <div className="md:col-span-2">
                       <label className="text-xs font-medium text-slate-700">Expressão cron</label>
                       <input
-                        className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                        className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                         placeholder="Ex.: 0 2 * * * (todos os dias às 02:00)"
                         value={form.schedule?.cronExpression || ''}
                         onChange={(e) => setForm({
                           ...form,
                           schedule: { ...form.schedule, cronExpression: e.target.value },
                         })}
+                        disabled={!canEdit}
                       />
                     </div>
                   )}
@@ -1168,7 +1196,7 @@ export default function Middleware() {
                       <div>
                         <label className="text-xs font-medium text-slate-700">Tipo</label>
                         <select
-                          className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                           value={form.schedule?.preset?.type || 'daily'}
                           onChange={(e) => setForm({
                             ...form,
@@ -1177,6 +1205,7 @@ export default function Middleware() {
                               preset: { ...(form.schedule?.preset || {}), type: e.target.value as PresetType },
                             },
                           })}
+                          disabled={!canEdit}
                         >
                           <option value="daily">Diária</option>
                           <option value="weekly">Semanal</option>
@@ -1186,7 +1215,7 @@ export default function Middleware() {
                       <div>
                         <label className="text-xs font-medium text-slate-700">Horário (HH:mm)</label>
                         <input
-                          className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                          className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                           placeholder="02:00"
                           value={form.schedule?.preset?.timeOfDay || ''}
                           onChange={(e) => setForm({
@@ -1200,6 +1229,7 @@ export default function Middleware() {
                               },
                             },
                           })}
+                          disabled={!canEdit}
                         />
                       </div>
                       {form.schedule?.preset?.type === 'weekly' && (
@@ -1209,7 +1239,7 @@ export default function Middleware() {
                             type="number"
                             min={0}
                             max={6}
-                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                             value={form.schedule?.preset?.dayOfWeek ?? 0}
                             onChange={(e) => setForm({
                               ...form,
@@ -1222,6 +1252,7 @@ export default function Middleware() {
                                 },
                               },
                             })}
+                            disabled={!canEdit}
                           />
                         </div>
                       )}
@@ -1232,7 +1263,7 @@ export default function Middleware() {
                             type="number"
                             min={1}
                             max={60}
-                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                            className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm disabled:bg-slate-100 disabled:cursor-not-allowed"
                             value={form.schedule?.preset?.intervalMinutes ?? 15}
                             onChange={(e) => setForm({
                               ...form,
@@ -1245,6 +1276,7 @@ export default function Middleware() {
                                 },
                               },
                             })}
+                            disabled={!canEdit}
                           />
                         </div>
                       )}
@@ -1263,8 +1295,9 @@ export default function Middleware() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || !canEdit}
                 className="px-4 py-2 text-sm bg-ngr-primary text-white rounded-lg hover:bg-ngr-secondary transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!canEdit ? (editingId ? 'Você não tem permissão para editar interfaces' : 'Você não tem permissão para criar interfaces') : ''}
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Salvar

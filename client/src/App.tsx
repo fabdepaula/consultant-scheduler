@@ -191,19 +191,19 @@ function App() {
               <Teams />
             </PermissionRoute>
           } />
+          <Route path="perfis" element={
+            <PermissionRoute permission="roles.manage">
+              <Roles />
+            </PermissionRoute>
+          } />
           <Route path="dados-externos" element={
-            <PermissionRoute permission="externalData.view">
+            <PermissionRoute permission="external-data.view">
               <ExternalData />
             </PermissionRoute>
           } />
           <Route path="middleware" element={
-            <PermissionRoute permission="middleware.manage">
+            <PermissionRoute anyPermission={['middleware.view', 'middleware.create', 'middleware.update', 'middleware.execute']}>
               <Middleware />
-            </PermissionRoute>
-          } />
-          <Route path="perfis" element={
-            <PermissionRoute permission="roles.manage">
-              <Roles />
             </PermissionRoute>
           } />
         </Route>

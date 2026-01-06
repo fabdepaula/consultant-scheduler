@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { rolesAPI } from '../services/api';
 import { Permission, Role } from '../types';
 
 export const usePermissions = () => {
@@ -33,24 +34,67 @@ export const usePermissions = () => {
         
         setPermissions(permissionKeys);
         setRole(userRole);
+        setLoading(false);
       } else {
-        // Se role é apenas um ID, precisaríamos buscar do backend
-        // Por enquanto, usar profile como fallback
+        // Se role é apenas um ID, buscar do backend (usar função async dentro do useEffect)
+        if (typeof user.role === 'string' || (userRole && !Array.isArray(userRole.permissions))) {
+          const roleId = typeof user.role === 'string' ? user.role : (userRole?._id || userRole?.id);
+          if (roleId) {
+            // Função async dentro do useEffect
+            const fetchRole = async () => {
+              try {
+                const roleResponse = await rolesAPI.getById(roleId);
+                const fetchedRole = roleResponse.data.role;
+                
+                if (fetchedRole && Array.isArray(fetchedRole.permissions)) {
+                  const permissionKeys = fetchedRole.permissions
+                    .map((perm: Permission | string) => {
+                      if (typeof perm === 'object' && perm.key) {
+                        return perm.active ? perm.key : null;
+                      }
+                      return perm;
+                    })
+                    .filter(Boolean) as string[];
+                  
+                  setPermissions(permissionKeys);
+                  setRole(fetchedRole);
+                  setLoading(false);
+                  return;
+                }
+              } catch (err) {
+                console.error('[usePermissions] Erro ao buscar role:', err);
+                // Em caso de erro, usar fallback
+                if (user.profile === 'admin') {
+                  setPermissions([]);
+                } else {
+                  setPermissions(['allocations.view']);
+                }
+                setLoading(false);
+              }
+            };
+            
+            fetchRole();
+            return; // Retornar antes de executar o fallback
+          }
+        }
+        
+        // Fallback: usar profile como fallback
         if (user.profile === 'admin') {
           // Admin tem todas as permissões (será carregado do backend quando necessário)
           setPermissions([]); // Será populado quando necessário
         } else {
           setPermissions(['allocations.view']); // Usuário padrão
         }
+        setLoading(false);
       }
     } else if (user.profile === 'admin') {
       // Fallback para compatibilidade: admin tem todas as permissões
       setPermissions([]); // Será verificado no backend
+      setLoading(false);
     } else {
       setPermissions(['allocations.view']); // Usuário padrão
+      setLoading(false);
     }
-    
-    setLoading(false);
   }, [user]);
 
   const hasPermission = (permissionKey: string): boolean => {

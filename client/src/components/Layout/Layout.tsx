@@ -49,8 +49,8 @@ export default function Layout() {
   const canManageTeams = isAdmin || hasPermission('teams.manage');
   const canManageStatus = isAdmin || hasPermission('status.manage');
   const canManageRoles = isAdmin || hasPermission('roles.manage');
-  const canViewExternalData = isAdmin || hasPermission('externalData.view');
-  const canManageMiddleware = isAdmin || hasPermission('middleware.manage');
+  const canViewExternalData = isAdmin || hasPermission('external-data.view');
+  const canManageMiddleware = isAdmin || hasPermission('middleware.view') || hasPermission('middleware.create') || hasPermission('middleware.update') || hasPermission('middleware.execute');
 
   const navItems = [
     { to: '/', icon: Calendar, label: 'Agenda' },

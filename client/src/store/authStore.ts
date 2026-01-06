@@ -34,7 +34,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const response = await authAPI.login(email, password);
       const { token, user } = response.data;
       
-      console.log('[AUTH] Login sucesso, salvando token...');
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
       
@@ -97,7 +96,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: true });
       const response = await authAPI.getProfile();
       const user = response.data.user;
-      console.log('[AUTH] Perfil obtido:', user.email);
       set({
         user,
         token,
