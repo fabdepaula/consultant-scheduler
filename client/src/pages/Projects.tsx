@@ -44,7 +44,8 @@ export default function Projects() {
     p.projectId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.projectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.projectType.toLowerCase().includes(searchTerm.toLowerCase())
+    p.projectType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.projectManager && p.projectManager.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const openCreateModal = () => {

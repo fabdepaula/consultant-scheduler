@@ -393,9 +393,9 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
           
           {/* Sub-header com colunas */}
           <tr className="bg-[#003366] text-white">
-            <th className="px-2 py-2 border border-slate-300 text-left w-[130px] min-w-[130px] sticky left-0 z-10 bg-[#003366]">CONSULTOR</th>
-            <th className="px-2 py-2 border border-slate-300 text-left w-[120px] min-w-[120px] sticky left-[130px] z-10 bg-[#003366]">FUNÇÃO</th>
-            <th className="px-1 py-2 border border-slate-300 text-center w-[60px] min-w-[60px] sticky left-[250px] z-10 bg-[#003366]">Período</th>
+            <th className="px-2 py-2 border border-slate-300 text-left w-[110px] min-w-[110px] sticky left-0 z-10 bg-[#003366]">CONSULTOR</th>
+            <th className="px-2 py-2 border border-slate-300 text-left w-[90px] min-w-[90px] sticky left-[110px] z-10 bg-[#003366]">FUNÇÃO</th>
+            <th className="px-1 py-2 border border-slate-300 text-center w-[60px] min-w-[60px] sticky left-[200px] z-10 bg-[#003366]">Período</th>
             {weekDays.map((day) => {
               const isWeekendDay = isWeekend(day);
               const isToday = isSameDay(day, new Date());
@@ -404,7 +404,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                 <th 
                   key={format(day, 'yyyy-MM-dd')}
                   className={`
-                    px-1 py-2 border border-slate-300 text-center w-[85px] min-w-[85px]
+                    px-1 py-2 border border-slate-300 text-center w-[50px] min-w-[50px] max-w-[50px]
                     ${isWeekendDay ? 'bg-[#4472C4]' : 'bg-[#003366]'}
                     ${isToday ? 'ring-2 ring-yellow-400 ring-inset' : ''}
                   `}
@@ -449,15 +449,15 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                         className="px-2 py-1 border border-slate-300 font-medium text-[#003366] align-top sticky left-0 z-[8] bg-slate-50"
                         style={{ backgroundColor: '#f8fafc' }}
                       >
-                        {consultant.name}
-                      </td>
+                {consultant.name}
+              </td>
                     )}
                     
                     {/* Função - sticky */}
                     {isFirstPeriod && isFirstSlot && (
                       <td 
                         rowSpan={PERIODS.reduce((acc, p) => acc + TIME_SLOTS_BY_PERIOD[p].length, 0)}
-                        className="px-2 py-1 border border-slate-300 text-slate-600 text-[10px] align-top sticky left-[130px] z-[8] bg-slate-50"
+                        className="px-2 py-1 border border-slate-300 text-slate-600 text-[10px] align-top sticky left-[110px] z-[8] bg-slate-50"
                         style={{ backgroundColor: '#f8fafc' }}
                       >
                         {functionsText}
@@ -468,31 +468,31 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                     {isFirstSlot && (
                       <td 
                         rowSpan={rowSpan}
-                        className="px-1 py-1 border border-slate-300 text-center text-slate-700 font-medium align-middle text-[10px] sticky left-[250px] z-[8] bg-slate-100"
+                        className="px-1 py-1 border border-slate-300 text-center text-slate-700 font-medium align-middle text-[10px] sticky left-[200px] z-[8] bg-slate-100"
                         style={{ backgroundColor: '#f1f5f9' }}
                       >
                         {PERIOD_LABELS[period]}
                       </td>
                     )}
-                    
+
                     {/* Células dos dias */}
-                    {weekDays.map((day) => {
-                      const dateKey = format(day, 'yyyy-MM-dd');
+              {weekDays.map((day) => {
+                const dateKey = format(day, 'yyyy-MM-dd');
                       const isWeekendDay = isWeekend(day);
                       const allocations = getAllocationsForSlot(consultantId, day, timeSlot);
                       const cellStyle = getCellStyle(allocations, period, isWeekendDay);
                       const hasConflict = allocations.length > 1;
                       const content = getCellContent(allocations, period, isWeekendDay);
-                      
-                      return (
-                        <td
+                  
+                  return (
+                    <td
                           key={`${consultantId}-${dateKey}-${timeSlot}`}
-                          className={`
+                      className={`
                             border border-slate-300 text-center align-middle
-                            h-[26px] min-h-[26px] max-h-[26px]
+                            h-[20px] min-h-[20px] max-h-[20px]
+                            w-[50px] min-w-[50px] max-w-[50px]
                             relative
                             cursor-pointer hover:opacity-80
-                            ${hasConflict ? 'animate-pulse' : ''}
                           `}
                           style={{
                             backgroundColor: cellStyle.backgroundColor,
@@ -502,15 +502,15 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                           }}
                           onClick={() => handleCellClick(consultant, day, timeSlot, period, allocations)}
                           onMouseEnter={(e) => handleCellHover(e, allocations[0])}
-                          onMouseLeave={() => setHoveredCell(null)}
-                        >
-                          <span className="truncate block px-1 text-[10px] font-medium">
+                      onMouseLeave={() => setHoveredCell(null)}
+                    >
+                          <span className="truncate block px-0.5 text-[8px] font-medium leading-tight">
                             {content}
                           </span>
-                        </td>
-                      );
-                    })}
-                  </tr>
+                  </td>
+                );
+              })}
+            </tr>
                 );
               });
             });

@@ -92,18 +92,10 @@ function PermissionRoute({
     return <>{children}</>;
   }
 
-  // Debug: log das permissões
-  console.log('[PermissionRoute] User:', user?.email);
-  console.log('[PermissionRoute] Permissions:', permissions);
-  console.log('[PermissionRoute] Checking permission:', permission);
-  console.log('[PermissionRoute] Checking anyPermission:', anyPermission);
-
   // Verificar permissão específica
   if (permission) {
     const hasAccess = hasPermission(permission);
-    console.log('[PermissionRoute] hasPermission result:', hasAccess);
     if (!hasAccess) {
-      console.log('[PermissionRoute] Access denied - redirecting to /');
       return <Navigate to="/" replace />;
     }
   }
@@ -111,14 +103,11 @@ function PermissionRoute({
   // Verificar qualquer uma das permissões
   if (anyPermission && anyPermission.length > 0) {
     const hasAccess = hasAnyPermission(...anyPermission);
-    console.log('[PermissionRoute] hasAnyPermission result:', hasAccess);
     if (!hasAccess) {
-      console.log('[PermissionRoute] Access denied - redirecting to /');
       return <Navigate to="/" replace />;
     }
   }
 
-  console.log('[PermissionRoute] Access granted');
   return <>{children}</>;
 }
 

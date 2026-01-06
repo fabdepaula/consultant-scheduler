@@ -25,6 +25,7 @@ export const getAllProjects = async (req: Request, res: Response, next: NextFunc
         { projectId: { $regex: search, $options: 'i' } },
         { client: { $regex: search, $options: 'i' } },
         { projectName: { $regex: search, $options: 'i' } },
+        { projectManager: { $regex: search, $options: 'i' } },
       ];
     }
 

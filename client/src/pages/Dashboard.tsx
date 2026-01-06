@@ -4,6 +4,7 @@ import { format, endOfWeek, addWeeks, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAgendaStore } from '../store/agendaStore';
 import { useAuthStore } from '../store/authStore';
+import { usePermissions } from '../hooks/usePermissions';
 import { teamsAPI } from '../services/api';
 import { Team } from '../types';
 import AgendaGrid from '../components/Grid/AgendaGrid';
@@ -30,7 +31,9 @@ export default function Dashboard() {
     clearError
   } = useAgendaStore();
   const { user } = useAuthStore();
+  const { hasPermission } = usePermissions();
   const isAdmin = user?.profile === 'admin';
+  const canBulkUpdate = hasPermission('allocations.bulk') || isAdmin;
 
   // Chave para armazenar filtros no localStorage
   const FILTERS_STORAGE_KEY = 'agendaFilters';
@@ -41,12 +44,13 @@ export default function Dashboard() {
       const saved = localStorage.getItem(FILTERS_STORAGE_KEY);
       if (saved) {
         const filters = JSON.parse(saved);
+        // Limpar valores inválidos (null, undefined, strings vazias que não sejam arrays)
         return {
-          selectedConsultants: filters.selectedConsultants || [],
-          selectedProject: filters.selectedProject || '',
-          selectedManager: filters.selectedManager || '',
-          selectedTeams: filters.selectedTeams || [],
-          showFilters: filters.showFilters || false,
+          selectedConsultants: Array.isArray(filters.selectedConsultants) ? filters.selectedConsultants : [],
+          selectedProject: filters.selectedProject && filters.selectedProject !== 'null' ? filters.selectedProject : '',
+          selectedManager: filters.selectedManager && filters.selectedManager !== 'null' ? filters.selectedManager : '',
+          selectedTeams: Array.isArray(filters.selectedTeams) ? filters.selectedTeams : [],
+          showFilters: filters.showFilters === true,
           currentWeekStart: filters.currentWeekStart ? new Date(filters.currentWeekStart) : null,
         };
       }
@@ -219,17 +223,18 @@ export default function Dashboard() {
   };
 
   // Verificar se há algum filtro ativo
+  // Considerar apenas filtros que realmente têm valores válidos
   const hasActiveFilters = 
-    selectedConsultants.length > 0 || 
-    selectedProject !== '' || 
-    selectedManager !== '' || 
-    selectedTeams.length > 0;
+    (selectedConsultants.length > 0) || 
+    (selectedProject !== '' && selectedProject !== null) || 
+    (selectedManager !== '' && selectedManager !== null) || 
+    (selectedTeams.length > 0);
 
-  // Contar filtros ativos
+  // Contar filtros ativos (apenas valores válidos)
   const activeFiltersCount = 
     (selectedConsultants.length > 0 ? 1 : 0) +
-    (selectedProject !== '' ? 1 : 0) +
-    (selectedManager !== '' ? 1 : 0) +
+    (selectedProject !== '' && selectedProject !== null ? 1 : 0) +
+    (selectedManager !== '' && selectedManager !== null ? 1 : 0) +
     (selectedTeams.length > 0 ? 1 : 0);
 
   const endDate = endOfWeek(addWeeks(currentWeekStart, weeksToShow - 1), { weekStartsOn: 1 });
@@ -296,7 +301,7 @@ export default function Dashboard() {
             )}
           </button>
 
-          {isAdmin && (
+          {canBulkUpdate && (
             <button
               onClick={() => setShowBulkModal(true)}
               className="flex items-center gap-2 px-3 py-2 btn-primary text-sm"

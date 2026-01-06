@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { X, Save, Calendar, Clock, Building2, Users2, ChevronDown, Check, Trash2, Plus } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { X, Save, Calendar, Clock, Building2, Users2, ChevronDown, Check, Trash2, Plus, User as UserIcon } from 'lucide-react';
 import { format, eachDayOfInterval, endOfWeek, addWeeks } from 'date-fns';
 import { useAgendaStore } from '../store/agendaStore';
 import { allocationsAPI } from '../services/api';
@@ -153,6 +153,27 @@ export default function BulkUpdateModal({ isOpen, onClose, currentWeekStart, wee
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'create' | 'delete'>('create'); // Modo: criar ou excluir
   
+  // Estado para filtro de gerente
+  const [selectedManagerFilter, setSelectedManagerFilter] = useState<string>('');
+  
+  // Obter lista única de gerentes dos projetos ativos
+  const uniqueManagers = useMemo(() => {
+    const managers = projects
+      .filter(p => p.active && p.projectManager)
+      .map(p => p.projectManager!)
+      .filter((manager, index, self) => self.indexOf(manager) === index)
+      .sort();
+    return managers;
+  }, [projects]);
+  
+  // Filtrar projetos baseado no gerente selecionado
+  const filteredProjects = useMemo(() => {
+    if (!selectedManagerFilter) {
+      return projects.filter(p => p.active);
+    }
+    return projects.filter(p => p.active && p.projectManager === selectedManagerFilter);
+  }, [projects, selectedManagerFilter]);
+  
   const [formData, setFormData] = useState({
     periods: ['manha'] as Period[],
     projectId: '',
@@ -179,6 +200,7 @@ export default function BulkUpdateModal({ isOpen, onClose, currentWeekStart, wee
         timeSlots: TIME_SLOTS_BY_PERIOD['manha'],
         overwriteExisting: false,
       });
+      setSelectedManagerFilter(''); // Limpar filtro de gerente
       setMode('create');
       setError('');
     }
@@ -660,6 +682,38 @@ export default function BulkUpdateModal({ isOpen, onClose, currentWeekStart, wee
             </select>
           </div>
 
+          {/* Filtro de Gerente */}
+          {(mode === 'create' ? availableStatuses.find(s => s.key === formData.status)?.requiresProject !== false : true) && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                <UserIcon className="w-4 h-4 inline mr-1" />
+                Gerente do Projeto
+              </label>
+              <select
+                value={selectedManagerFilter}
+                onChange={(e) => {
+                  const newManager = e.target.value;
+                  setSelectedManagerFilter(newManager);
+                  // Limpar projeto selecionado se não pertencer ao novo gerente
+                  if (newManager && formData.projectId) {
+                    const currentProject = projects.find(p => (p._id || p.id) === formData.projectId);
+                    if (currentProject?.projectManager !== newManager) {
+                      setFormData(prev => ({ ...prev, projectId: '' }));
+                    }
+                  }
+                }}
+                className="select-field"
+              >
+                <option value="">Todos os gerentes</option>
+                {uniqueManagers.map((manager) => (
+                  <option key={manager} value={manager}>
+                    {manager}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Projeto */}
           {(mode === 'create' ? availableStatuses.find(s => s.key === formData.status)?.requiresProject !== false : true) && (
             <div>
@@ -672,14 +726,24 @@ export default function BulkUpdateModal({ isOpen, onClose, currentWeekStart, wee
                 onChange={(e) => setFormData(prev => ({ ...prev, projectId: e.target.value }))}
                 className="select-field"
                 required={mode === 'create' && availableStatuses.find(s => s.key === formData.status)?.requiresProject !== false}
+                disabled={!!(selectedManagerFilter && filteredProjects.length === 0)}
               >
-                <option value="">{mode === 'delete' ? 'Todos os projetos' : 'Selecione um projeto...'}</option>
-                {projects.filter(p => p.active).map((project) => (
+                <option value="">
+                  {selectedManagerFilter && filteredProjects.length === 0
+                    ? 'Nenhum projeto encontrado para este gerente'
+                    : mode === 'delete' ? 'Todos os projetos' : 'Selecione um projeto...'}
+                </option>
+                {filteredProjects.map((project) => (
                   <option key={project._id || project.id} value={project._id || project.id}>
                     {project.projectId} - {project.client} ({project.projectName})
                   </option>
                 ))}
               </select>
+              {selectedManagerFilter && (
+                <p className="text-xs text-slate-500 mt-1">
+                  Mostrando apenas projetos do gerente: <span className="font-medium">{selectedManagerFilter}</span>
+                </p>
+              )}
             </div>
           )}
 

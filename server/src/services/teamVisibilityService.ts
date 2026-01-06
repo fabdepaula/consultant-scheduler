@@ -33,13 +33,28 @@ export const getAllowedTeamsForUser = async (userId: string): Promise<string[] |
       allowedTeams: role.allowedTeams,
       allowedTeamsType: typeof role.allowedTeams,
       isArray: Array.isArray(role.allowedTeams),
-      length: role.allowedTeams?.length
+      length: role.allowedTeams?.length,
+      isSystem: role.isSystem,
+      userProfile: user.profile
     });
 
-    // Se não tem restrição de equipes (undefined/null), NÃO pode ver nenhuma (restrito)
-    if (role.allowedTeams === undefined || role.allowedTeams === null) {
-      console.log('[teamVisibilityService] No allowedTeams (undefined/null) - returning []');
-      return []; // null/undefined = nenhuma equipe (restrito)
+    // Se o role é de sistema (como "Administrador") OU o usuário é admin antigo,
+    // undefined/null significa "todas as equipes" (sem restrição)
+    const isSystemAdmin = role.isSystem && (role.key === 'admin' || role.name?.toLowerCase().includes('admin'));
+    const isLegacyAdmin = user.profile === 'admin';
+    
+    if (isSystemAdmin || isLegacyAdmin) {
+      // Para admin, undefined/null = todas as equipes (sem restrição)
+      if (role.allowedTeams === undefined || role.allowedTeams === null) {
+        console.log('[teamVisibilityService] Admin role with no allowedTeams restriction - returning null (all teams)');
+        return null; // null = todas as equipes para admin
+      }
+    } else {
+      // Para outros roles, undefined/null = nenhuma equipe (restrito)
+      if (role.allowedTeams === undefined || role.allowedTeams === null) {
+        console.log('[teamVisibilityService] No allowedTeams (undefined/null) - returning []');
+        return []; // null/undefined = nenhuma equipe (restrito)
+      }
     }
 
     // Se o array está vazio, significa que não pode ver nenhuma equipe
