@@ -404,7 +404,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                 <th 
                   key={format(day, 'yyyy-MM-dd')}
                   className={`
-                    px-1 py-2 border border-slate-300 text-center w-[50px] min-w-[50px] max-w-[50px]
+                    px-1 py-2 border border-slate-300 text-center w-[60px] min-w-[60px] max-w-[60px]
                     ${isWeekendDay ? 'bg-[#4472C4]' : 'bg-[#003366]'}
                     ${isToday ? 'ring-2 ring-yellow-400 ring-inset' : ''}
                   `}
@@ -489,8 +489,8 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                           key={`${consultantId}-${dateKey}-${timeSlot}`}
                       className={`
                             border border-slate-300 text-center align-middle
-                            h-[20px] min-h-[20px] max-h-[20px]
-                            w-[50px] min-w-[50px] max-w-[50px]
+                            h-[22px] min-h-[22px] max-h-[22px]
+                            w-[60px] min-w-[60px] max-w-[60px]
                             relative
                             cursor-pointer hover:opacity-80
                           `}
