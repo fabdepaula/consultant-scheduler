@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   X, Trash2, Save, Calendar, Clock, Building2, User as UserIcon, 
-  AlertTriangle, FileText, Paperclip, History, Upload, Download, File, Plus, Check
+  AlertTriangle, FileText, Paperclip, History, Upload, Download, File, Plus, Check, ExternalLink
 } from 'lucide-react';
 import { useAgendaStore } from '../../store/agendaStore';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -807,8 +807,29 @@ export default function AllocationModal({
                   onChange={(e) => setFormData(prev => ({ ...prev, artiaActivity: e.target.value }))}
                   disabled={!effectiveIsAdmin}
                   className="input-field"
-                  placeholder="ID ou link da atividade no Artia..."
+                  placeholder="link atividade no Artia..."
                 />
+                {/* Link clicável se for uma URL válida */}
+                {formData.artiaActivity && (() => {
+                  const url = formData.artiaActivity.trim();
+                  const isValidUrl = url.startsWith('http://') || url.startsWith('https://') || url.startsWith('www.');
+                  const displayUrl = url.startsWith('www.') ? `https://${url}` : url;
+                  
+                  if (isValidUrl) {
+                    return (
+                      <a
+                        href={displayUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1.5 text-sm text-ngr-primary hover:text-ngr-secondary transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span className="underline">Abrir link no Artia</span>
+                      </a>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* Notes */}
