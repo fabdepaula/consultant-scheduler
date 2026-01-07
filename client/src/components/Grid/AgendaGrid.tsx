@@ -404,10 +404,15 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                 <th 
                   key={format(day, 'yyyy-MM-dd')}
                   className={`
-                    px-1 py-2 border border-slate-300 text-center w-[60px] min-w-[60px] max-w-[60px]
+                    px-1 py-2 border border-slate-300 text-center
                     ${isWeekendDay ? 'bg-[#4472C4]' : 'bg-[#003366]'}
                     ${isToday ? 'ring-2 ring-yellow-400 ring-inset' : ''}
                   `}
+                  style={{
+                    width: '70px',
+                    minWidth: '70px',
+                    maxWidth: '70px'
+                  }}
                 >
                   <div className="font-bold">{format(day, 'dd')}</div>
                   <div className="font-normal text-[10px] opacity-80">
@@ -488,12 +493,16 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                           key={`${consultantId}-${dateKey}-${timeSlot}`}
                       className={`
                             border border-slate-300 text-center align-middle
-                            h-[22px] min-h-[22px] max-h-[22px]
-                            w-[60px] min-w-[60px] max-w-[60px]
                             relative
                             cursor-pointer hover:opacity-80
                           `}
                           style={{
+                            height: '23px',
+                            minHeight: '23px',
+                            maxHeight: '23px',
+                            width: '70px',
+                            minWidth: '70px',
+                            maxWidth: '70px',
                             backgroundColor: cellStyle.backgroundColor,
                             color: cellStyle.color,
                             ...(cellStyle.boxShadow && { boxShadow: cellStyle.boxShadow }),
