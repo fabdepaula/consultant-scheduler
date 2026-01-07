@@ -481,7 +481,6 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                       const isWeekendDay = isWeekend(day);
                       const allocations = getAllocationsForSlot(consultantId, day, timeSlot);
                       const cellStyle = getCellStyle(allocations, period, isWeekendDay);
-                      const hasConflict = allocations.length > 1;
                       const content = getCellContent(allocations, period, isWeekendDay);
                   
                   return (

@@ -73,7 +73,7 @@ function PermissionRoute({
   anyPermission?: string[];
 }) {
   const { user, isAuthenticated, initialized } = useAuthStore();
-  const { hasPermission, hasAnyPermission, permissions, loading } = usePermissions();
+  const { hasPermission, hasAnyPermission, loading } = usePermissions();
 
   if (!initialized || loading) {
     return (
