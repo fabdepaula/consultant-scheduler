@@ -45,6 +45,7 @@ Sistema web para gerenciamento de agenda de consultores de TI da NGR Global.
 - ✅ Visualização multi-semana (1-4 semanas)
 - ✅ Detecção automática de conflitos
 - ✅ Rastreamento de quem criou cada alocação
+- ✅ Atualização automática em tempo real (configurável via variável de ambiente)
 
 ## 🎨 Layout
 
@@ -90,7 +91,21 @@ cp server/.env.example server/.env
 # Edite o arquivo .env com suas configurações
 # - MONGODB_URI: sua string de conexão MongoDB
 # - JWT_SECRET: uma chave secreta segura
+# - AGENDA_POLLING_INTERVAL: intervalo de atualização automática da agenda (em milissegundos)
+#   Padrão: 30000 (30 segundos)
+#   Mínimo: 5000 (5 segundos)
+#   Máximo: 300000 (5 minutos)
 ```
+
+**Variáveis de ambiente disponíveis:**
+
+| Variável | Descrição | Padrão | Obrigatório |
+|----------|-----------|--------|-------------|
+| `MONGODB_URI` | String de conexão MongoDB | - | ✅ Sim |
+| `JWT_SECRET` | Chave secreta para JWT | - | ✅ Sim |
+| `AGENDA_POLLING_INTERVAL` | Intervalo de atualização automática da agenda (ms) | 30000 | ❌ Não |
+| `PORT` | Porta do servidor backend | 3001 | ❌ Não |
+| `CLIENT_URL` | URL do frontend (para CORS) | http://localhost:5173 | ❌ Não |
 
 ### 2. Instale as dependências
 ```bash
@@ -199,6 +214,32 @@ consultant-scheduler/
 - `POST /api/function-config` - Criar (admin)
 - `PUT /api/function-config/:id` - Atualizar (admin)
 - `DELETE /api/function-config/:id` - Remover (admin)
+
+### Sistema
+- `GET /api/system/config` - Obter configurações públicas do sistema (intervalo de polling, etc.)
+
+## ⚙️ Configurações do Sistema
+
+### Intervalo de Atualização Automática da Agenda
+
+O sistema possui atualização automática em tempo real da agenda. O intervalo pode ser configurado através da variável de ambiente `AGENDA_POLLING_INTERVAL`.
+
+**Como configurar:**
+
+1. Edite o arquivo `.env` na pasta `server/`
+2. Adicione ou modifique a linha:
+   ```env
+   AGENDA_POLLING_INTERVAL=30000
+   ```
+3. Reinicie o servidor para aplicar as mudanças
+
+**Valores recomendados:**
+- **Desenvolvimento:** 10000-15000 (10-15 segundos)
+- **Produção:** 30000-60000 (30-60 segundos)
+- **Mínimo:** 5000 (5 segundos)
+- **Máximo:** 300000 (5 minutos)
+
+**Nota:** Se a variável não for definida, o sistema usa o valor padrão de 30 segundos (30000ms).
 
 ## 📄 Licença
 

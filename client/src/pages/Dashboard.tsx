@@ -5,7 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { useAgendaStore } from '../store/agendaStore';
 import { useAuthStore } from '../store/authStore';
 import { usePermissions } from '../hooks/usePermissions';
-import { teamsAPI } from '../services/api';
+import { teamsAPI, systemAPI } from '../services/api';
 import { Team } from '../types';
 import AgendaGrid from '../components/Grid/AgendaGrid';
 import Legend from '../components/Grid/Legend';
@@ -96,10 +96,15 @@ export default function Dashboard() {
   
   const [showFilters, setShowFilters] = useState(savedFilters.showFilters);
   const [showBulkModal, setShowBulkModal] = useState(false);
+  const [isAllocationModalOpen, setIsAllocationModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string>(savedFilters.selectedProject);
   const [selectedManager, setSelectedManager] = useState<string>(savedFilters.selectedManager);
   const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>(savedFilters.selectedTeams);
+
+  // Intervalo de polling - valor padrão enquanto carrega configuração do backend
+  const DEFAULT_POLLING_INTERVAL = 30000; // 30 segundos
+  const [pollingInterval, setPollingInterval] = useState<number>(DEFAULT_POLLING_INTERVAL);
 
   // Obter lista única de gerentes dos projetos ativos
   const uniqueManagers = useMemo(() => {
@@ -130,6 +135,22 @@ export default function Dashboard() {
       }
     };
     fetchTeams();
+  }, []);
+
+  // Buscar configuração do sistema (intervalo de polling) do backend
+  useEffect(() => {
+    const fetchSystemConfig = async () => {
+      try {
+        const response = await systemAPI.getConfig();
+        const interval = response.data.config?.pollingInterval || DEFAULT_POLLING_INTERVAL;
+        setPollingInterval(interval);
+      } catch (err) {
+        console.error('Erro ao carregar configuração do sistema:', err);
+        // Usar valor padrão em caso de erro
+        setPollingInterval(DEFAULT_POLLING_INTERVAL);
+      }
+    };
+    fetchSystemConfig();
   }, []);
 
   // Filtrar consultores por equipes selecionadas
@@ -181,6 +202,37 @@ export default function Dashboard() {
     const endDate = endOfWeek(addWeeks(currentWeekStart, weeksToShow - 1), { weekStartsOn: 1 });
     fetchAllocations(startDate, endDate);
   }, [currentWeekStart, weeksToShow]);
+
+  // Polling automático para atualizar alocações em tempo real
+  useEffect(() => {
+    // Não fazer polling se algum modal estiver aberto
+    if (isAllocationModalOpen || showBulkModal) {
+      return;
+    }
+
+    // Não fazer polling se a aba estiver oculta
+    if (document.hidden) {
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      // Verificar se a aba ainda está visível antes de atualizar
+      if (!document.hidden) {
+        // Atualizar apenas alocações (silenciosamente)
+        // As datas são recalculadas para garantir que estão corretas
+        const currentStartDate = startOfWeek(currentWeekStart, { weekStartsOn: 1 });
+        const currentEndDate = endOfWeek(addWeeks(currentWeekStart, weeksToShow - 1), { weekStartsOn: 1 });
+        // IMPORTANTE: passar silent: true para não causar "piscar"
+        fetchAllocations(currentStartDate, currentEndDate, true).catch((err) => {
+          console.error('Erro ao atualizar alocações no polling:', err);
+        });
+      }
+    }, pollingInterval);
+
+    // Cleanup do intervalo
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWeekStart, weeksToShow, pollingInterval, isAllocationModalOpen, showBulkModal]);
 
   const goToToday = () => {
     setCurrentWeek(new Date());
@@ -496,7 +548,12 @@ export default function Dashboard() {
       <div className="flex-1 flex flex-col min-h-0 space-y-4">
         {/* Grid */}
         <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-auto">
-          <AgendaGrid selectedProject={selectedProject} selectedManager={selectedManager} selectedTeams={selectedTeams} />
+          <AgendaGrid 
+            selectedProject={selectedProject} 
+            selectedManager={selectedManager} 
+            selectedTeams={selectedTeams}
+            onModalOpenChange={setIsAllocationModalOpen}
+          />
         </div>
 
         {/* Instructions */}

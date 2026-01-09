@@ -18,7 +18,7 @@ interface AgendaState {
   // Actions
   fetchConsultants: (includeInactive?: boolean) => Promise<void>;
   fetchProjects: () => Promise<void>;
-  fetchAllocations: (startDate: Date, endDate: Date) => Promise<void>;
+  fetchAllocations: (startDate: Date, endDate: Date, silent?: boolean) => Promise<void>;
   fetchStatusConfigs: () => Promise<void>;
   setCurrentWeek: (date: Date) => void;
   setWeeksToShow: (weeks: number) => void;
@@ -90,18 +90,55 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
     }
   },
 
-  fetchAllocations: async (startDate: Date, endDate: Date) => {
+  fetchAllocations: async (startDate: Date, endDate: Date, silent = false) => {
     try {
-      set({ isLoading: true });
+      // Apenas definir isLoading se não for uma atualização silenciosa
+      if (!silent) {
+        set({ isLoading: true });
+      }
+      
       const response = await allocationsAPI.getAgenda(
         format(startDate, 'yyyy-MM-dd'),
         format(endDate, 'yyyy-MM-dd')
       );
-      set({
-        allocations: response.data.allocations,
-        groupedAllocations: response.data.grouped,
-        isLoading: false,
-      });
+      
+      // Comparar com dados existentes para evitar atualização desnecessária
+      const currentAllocations = get().allocations;
+      const currentGrouped = get().groupedAllocations;
+      const newAllocations = response.data.allocations;
+      const newGrouped = response.data.grouped;
+      
+      // Verificar se houve mudanças reais (comparação por IDs e timestamps)
+      // Se não houver alocações anteriores, sempre atualizar (primeira carga)
+      const hasChanges = currentAllocations.length === 0 || 
+        JSON.stringify(currentAllocations.map((a: Allocation) => ({ 
+          id: a._id || a.id, 
+          status: a.status, 
+          projectId: a.projectId, 
+          consultantId: a.consultantId,
+          date: a.date,
+          timeSlot: a.timeSlot 
+        }))) !== JSON.stringify(newAllocations.map((a: Allocation) => ({ 
+          id: a._id || a.id, 
+          status: a.status, 
+          projectId: a.projectId, 
+          consultantId: a.consultantId,
+          date: a.date,
+          timeSlot: a.timeSlot 
+        }))) ||
+        JSON.stringify(currentGrouped) !== JSON.stringify(newGrouped);
+      
+      // Só atualizar se houver mudanças ou se não for silencioso (primeira carga)
+      if (hasChanges || !silent) {
+        set({
+          allocations: newAllocations,
+          groupedAllocations: newGrouped,
+          isLoading: false,
+        });
+      } else if (!silent) {
+        // Se não houver mudanças mas não for silencioso, apenas remover loading
+        set({ isLoading: false });
+      }
     } catch (error: any) {
       set({
         error: error.response?.data?.message || 'Erro ao carregar alocações',

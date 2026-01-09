@@ -10,6 +10,7 @@ import externalDataRoutes from './externalDataRoutes.js';
 import dataSyncRoutes from './dataSyncRoutes.js';
 import roleRoutes from './roleRoutes.js';
 import permissionRoutes from './permissionRoutes.js';
+import systemRoutes from './systemRoutes.js';
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.use('/external-data', externalDataRoutes);
 router.use('/middleware', dataSyncRoutes);
 router.use('/roles', roleRoutes);
 router.use('/permissions', permissionRoutes);
+router.use('/system', systemRoutes);
 
 // Health check
 router.get('/health', (req, res) => {

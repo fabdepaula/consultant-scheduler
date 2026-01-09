@@ -38,9 +38,10 @@ interface AgendaGridProps {
   selectedProject?: string;
   selectedManager?: string;
   selectedTeams?: string[];
+  onModalOpenChange?: (isOpen: boolean) => void;
 }
 
-export default function AgendaGrid({ selectedProject, selectedManager, selectedTeams = [] }: AgendaGridProps = {}) {
+export default function AgendaGrid({ selectedProject, selectedManager, selectedTeams = [], onModalOpenChange }: AgendaGridProps = {}) {
   const { 
     consultants, 
     groupedAllocations, 
@@ -149,6 +150,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
       existingAllocations: allocations
     });
     setModalOpen(true);
+    onModalOpenChange?.(true);
   };
 
   const handleCellHover = (
@@ -425,7 +427,31 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
         </thead>
 
         <tbody>
-          {displayedConsultants.map((consultant) => {
+          {displayedConsultants.length === 0 ? (
+            <tr>
+              <td 
+                colSpan={3 + totalDays} 
+                className="px-4 py-8 text-center text-slate-500 bg-slate-50"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <p className="font-medium">Nenhum consultor encontrado</p>
+                  <p className="text-sm text-slate-400">
+                    {consultants.length === 0 
+                      ? 'Carregando consultores...'
+                      : consultants.filter(c => c.active).length === 0
+                        ? 'Não há consultores ativos cadastrados'
+                        : consultants.filter(c => c.active && c.hasAgenda).length === 0
+                          ? 'Nenhum consultor ativo possui agenda habilitada'
+                          : (selectedProject || selectedManager || selectedTeams.length > 0 || selectedConsultants.length > 0)
+                            ? 'Nenhum consultor corresponde aos filtros aplicados. Tente limpar os filtros.'
+                            : 'Verifique se há consultores ativos com agenda habilitada'
+                    }
+                  </p>
+                </div>
+              </td>
+            </tr>
+          ) : (
+            displayedConsultants.map((consultant) => {
             const consultantId = consultant.id || consultant._id || '';
             const functionsText = (consultant.functions || [])
               .map(f => getFunctionLabel(f))
@@ -505,6 +531,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                             maxWidth: '70px',
                             backgroundColor: cellStyle.backgroundColor,
                             color: cellStyle.color,
+                            transition: 'background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border 0.2s ease',
                             ...(cellStyle.boxShadow && { boxShadow: cellStyle.boxShadow }),
                             ...(cellStyle.border && { border: cellStyle.border }),
                           }}
@@ -522,7 +549,8 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                 );
               });
             });
-          })}
+            })
+          )}
         </tbody>
       </table>
 
@@ -539,6 +567,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
           onClose={() => {
             setModalOpen(false);
             setSelectedCell(null);
+            onModalOpenChange?.(false);
           }}
         />
       )}

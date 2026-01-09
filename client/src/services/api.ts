@@ -273,3 +273,8 @@ export const middlewareAPI = {
   remove: (id: string) => api.delete(`/middleware/${id}`),
   execute: (id: string) => api.post(`/middleware/${id}/execute`),
 };
+
+// System Config API
+export const systemAPI = {
+  getConfig: () => api.get('/system/config'),
+};
