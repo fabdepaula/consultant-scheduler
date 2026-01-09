@@ -121,10 +121,24 @@ export default function AllocationModal({
       .map(([key, label]) => ({ key, label, requiresProject: !['livre', 'bloqueado', 'feriado', 'ponte'].includes(key) }));
   }, [statusConfigs]);
 
+  // Inicializar horários automaticamente com base no período inicial
+  // Quando não há alocação existente (nova alocação), sempre usar TODOS os horários do período
+  const getInitialTimeSlots = (): TimeSlot[] => {
+    const period = initialPeriod || 'manha';
+    // Sempre retornar todos os horários do período, não apenas o timeSlot inicial
+    return TIME_SLOTS_BY_PERIOD[period] || ['08-10'];
+  };
+
+  // Para nova alocação: sempre usar todos os horários do período inicial
+  // Para edição: será sobrescrito no useEffect quando allocation existir
+  const initialTimeSlots = !allocation 
+    ? getInitialTimeSlots() // Nova alocação: todos os horários do período
+    : (initialTimeSlot ? [initialTimeSlot] : getInitialTimeSlots()); // Edição: horário específico ou todos
+
   const [formData, setFormData] = useState({
     projectId: '',
     periods: [initialPeriod || 'manha'] as Period[], // Array de períodos
-    timeSlots: [initialTimeSlot || '08-10'] as TimeSlot[], // Array de horários
+    timeSlots: initialTimeSlots, // Array de horários
     status: 'a_confirmar',
     artiaActivity: '',
     notes: ''
@@ -139,6 +153,7 @@ export default function AllocationModal({
   const willCreateConflict = !allocation && existingAllocations.length > 0;
   const effectiveStatus = willCreateConflict ? 'conflito' : formData.status;
 
+  // Quando há alocação existente (edição), carregar dados da alocação
   useEffect(() => {
     if (allocation) {
       const project = allocation.projectId as Project;
@@ -149,7 +164,7 @@ export default function AllocationModal({
       setFormData({
         projectId: project?._id || project?.id || '',
         periods: [allocation.period], // Array com período da alocação
-        timeSlots: [allocation.timeSlot], // Array com horário da alocação
+        timeSlots: [allocation.timeSlot], // Array com horário da alocação (edição usa apenas o horário existente)
         status: allocation.status,
         artiaActivity: allocation.artiaActivity || '',
         notes: allocation.notes || ''
@@ -164,8 +179,18 @@ export default function AllocationModal({
       
       setHistory(allocation.history || []);
       setAttachments(allocation.attachments || []);
+    } else {
+      // Quando não há alocação (nova alocação), garantir que todos os horários do período inicial estão selecionados
+      if (initialPeriod) {
+        const periodTimeSlots = TIME_SLOTS_BY_PERIOD[initialPeriod] || [];
+        setFormData(prev => ({
+          ...prev,
+          periods: [initialPeriod],
+          timeSlots: periodTimeSlots.length > 0 ? periodTimeSlots : prev.timeSlots
+        }));
+      }
     }
-  }, [allocation, projects]);
+  }, [allocation, projects, initialPeriod]);
 
   // Carregar histórico e anexos completos
   useEffect(() => {
@@ -328,15 +353,27 @@ export default function AllocationModal({
   // Horários disponíveis para todos os períodos selecionados
   const availableTimeSlots = formData.periods.flatMap(period => TIME_SLOTS_BY_PERIOD[period]);
 
-  // Atualizar horários quando os períodos mudam
+  // Atualizar horários quando os períodos mudam (remover apenas horários inválidos)
+  // Nota: Não adicionamos horários automaticamente aqui para não sobrescrever a seleção manual do usuário
+  // A adição automática acontece apenas em togglePeriod quando um período é selecionado
   useEffect(() => {
     if (formData.periods.length > 0) {
       const allTimeSlots = formData.periods.flatMap(period => TIME_SLOTS_BY_PERIOD[period]);
       // Manter apenas os horários que ainda são válidos para os períodos selecionados
-      setFormData(prev => ({
-        ...prev,
-        timeSlots: prev.timeSlots.filter(ts => allTimeSlots.includes(ts))
-      }));
+      setFormData(prev => {
+        const validTimeSlots = prev.timeSlots.filter(ts => allTimeSlots.includes(ts));
+        // Se não há horários válidos, adicionar todos os horários dos períodos selecionados
+        if (validTimeSlots.length === 0 && prev.timeSlots.length > 0) {
+          return {
+            ...prev,
+            timeSlots: allTimeSlots
+          };
+        }
+        return {
+          ...prev,
+          timeSlots: validTimeSlots
+        };
+      });
     }
   }, [formData.periods]);
 
@@ -350,9 +387,23 @@ export default function AllocationModal({
       // Se não sobrou nenhum período, retorna sem fazer nada
       if (newPeriods.length === 0) return prev;
       
+      // Obter os horários do período sendo selecionado/deselecionado
+      const periodTimeSlots = TIME_SLOTS_BY_PERIOD[period];
+      
+      let newTimeSlots: TimeSlot[];
+      if (isSelected) {
+        // Removendo período: remover apenas os horários deste período
+        newTimeSlots = prev.timeSlots.filter(ts => !periodTimeSlots.includes(ts));
+      } else {
+        // Adicionando período: adicionar todos os horários deste período
+        // Combinar horários existentes com os novos, removendo duplicatas
+        newTimeSlots = [...new Set([...prev.timeSlots, ...periodTimeSlots])];
+      }
+      
       return {
         ...prev,
-        periods: newPeriods
+        periods: newPeriods,
+        timeSlots: newTimeSlots
       };
     });
   };
