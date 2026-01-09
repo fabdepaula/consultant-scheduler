@@ -147,8 +147,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
     date: Date,
     timeSlot: TimeSlot,
     period: Period,
-    allocations: Allocation[],
-    event?: React.MouseEvent
+    allocations: Allocation[]
   ) => {
     // Se o menu de contexto está aberto ou está sendo fechado, ignorar o clique para evitar abrir o modal
     if (contextMenu || isClosingContextMenu) {
@@ -194,10 +193,10 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
   // Handler para menu de contexto (botão direito)
   const handleContextMenu = (
     e: React.MouseEvent,
-    consultant: User,
-    date: Date,
-    timeSlot: TimeSlot,
-    period: Period,
+    _consultant: User,
+    _date: Date,
+    _timeSlot: TimeSlot,
+    _period: Period,
     allocations: Allocation[]
   ) => {
     e.preventDefault(); // Prevenir menu padrão do navegador
@@ -611,7 +610,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                             ...(cellStyle.boxShadow && { boxShadow: cellStyle.boxShadow }),
                             ...(cellStyle.border && { border: cellStyle.border }),
                           }}
-                          onClick={(e) => handleCellClick(consultant, day, timeSlot, period, allocations, e)}
+                          onClick={() => handleCellClick(consultant, day, timeSlot, period, allocations)}
                           onContextMenu={(e) => handleContextMenu(e, consultant, day, timeSlot, period, allocations)}
                           onMouseEnter={(e) => handleCellHover(e, allocations[0])}
                       onMouseLeave={() => setHoveredCell(null)}

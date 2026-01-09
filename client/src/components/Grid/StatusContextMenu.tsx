@@ -37,12 +37,8 @@ export default function StatusContextMenu({
 
   // Fechar ao clicar fora ou pressionar ESC
   useEffect(() => {
-    // Flag para rastrear se o menu está sendo fechado para evitar abrir o modal
-    let isClosing = false;
-
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        isClosing = true;
         // Prevenir que o clique fora dispare o onClick da célula
         e.stopPropagation();
         e.preventDefault();
@@ -50,10 +46,6 @@ export default function StatusContextMenu({
         // Usar timeout para garantir que o flag seja processado antes de fechar
         setTimeout(() => {
           onClose();
-          // Resetar o flag após um delay maior para garantir que não abra o modal
-          setTimeout(() => {
-            isClosing = false;
-          }, 100);
         }, 0);
       }
     };
@@ -61,24 +53,16 @@ export default function StatusContextMenu({
     const handleRightClick = (e: MouseEvent) => {
       // Se clicar com botão direito fora do menu, fechar sem abrir modal
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        isClosing = true;
         e.stopPropagation();
         e.preventDefault();
         onClose();
-        setTimeout(() => {
-          isClosing = false;
-        }, 200);
       }
     };
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        isClosing = true;
         e.stopPropagation();
         onClose();
-        setTimeout(() => {
-          isClosing = false;
-        }, 100);
       }
     };
 

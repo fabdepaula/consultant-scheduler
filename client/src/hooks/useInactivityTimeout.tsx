@@ -5,15 +5,14 @@ import InactivityWarning from '../components/Security/InactivityWarning';
 // Configurações (em milissegundos)
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutos
 const WARNING_TIME = 5 * 60 * 1000; // Aviso 5 minutos antes (aos 25 minutos)
-const WARNING_DURATION = 5 * 60 * 1000; // 5 minutos para o usuário responder
 
 export const useInactivityTimeout = () => {
   const [showWarning, setShowWarning] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
   const [lastActivity, setLastActivity] = useState(Date.now());
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { logout } = useAuthStore();
 
   const resetTimer = useCallback(() => {
@@ -119,7 +118,7 @@ export const useInactivityTimeout = () => {
     ];
 
     // Throttle para evitar muitas chamadas
-    let throttleTimer: NodeJS.Timeout | null = null;
+    let throttleTimer: ReturnType<typeof setTimeout> | null = null;
     const throttledReset = () => {
       if (throttleTimer) return;
       throttleTimer = setTimeout(() => {
