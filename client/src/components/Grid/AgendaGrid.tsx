@@ -18,6 +18,7 @@ import {
 } from '../../types';
 import AllocationModal from './AllocationModal';
 import CellTooltip from './CellTooltip';
+import StatusContextMenu from './StatusContextMenu';
 
 // Cores padrão para fallback
 const DEFAULT_COLORS: Record<string, { bg: string; text: string }> = {
@@ -51,12 +52,20 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
     weeksToShow,
     selectedConsultants,
     statusConfigs,
-    isLoading 
+    isLoading,
+    updateAllocation,
+    deleteAllocation,
+    refreshData
   } = useAgendaStore();
   const { user } = useAuthStore();
   const { hasPermission } = usePermissions();
   // Compatibilidade: manter isAdmin para verificação rápida
   const isAdmin = user?.profile === 'admin' || hasPermission('allocations.create');
+  
+  // Verificar permissões específicas para menu de contexto
+  const canUpdateAllocation = isAdmin || hasPermission('allocations.update');
+  const canDeleteAllocation = isAdmin || hasPermission('allocations.delete');
+  
   const [functions, setFunctions] = useState<FunctionConfig[]>([]);
 
   useEffect(() => {
@@ -121,18 +130,31 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
     x: number;
     y: number;
   } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    allocation: Allocation | null;
+    allocations: Allocation[];
+    x: number;
+    y: number;
+  } | null>(null);
+  const [isClosingContextMenu, setIsClosingContextMenu] = useState(false);
 
   // Generate days for all weeks
   const totalDays = 7 * weeksToShow;
   const weekDays = Array.from({ length: totalDays }, (_, i) => addDays(currentWeekStart, i));
 
   const handleCellClick = (
-    consultant: User, 
-    date: Date, 
+    consultant: User,
+    date: Date,
     timeSlot: TimeSlot,
     period: Period,
-    allocations: Allocation[]
+    allocations: Allocation[],
+    event?: React.MouseEvent
   ) => {
+    // Se o menu de contexto está aberto ou está sendo fechado, ignorar o clique para evitar abrir o modal
+    if (contextMenu || isClosingContextMenu) {
+      return;
+    }
+
     // Permitir que todos os usuários abram o modal (consultores podem visualizar)
     // A edição será bloqueada no modal para não-admins
     
@@ -167,6 +189,60 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
       x: e.clientX,
       y: e.clientY
     });
+  };
+
+  // Handler para menu de contexto (botão direito)
+  const handleContextMenu = (
+    e: React.MouseEvent,
+    consultant: User,
+    date: Date,
+    timeSlot: TimeSlot,
+    period: Period,
+    allocations: Allocation[]
+  ) => {
+    e.preventDefault(); // Prevenir menu padrão do navegador
+    e.stopPropagation(); // Prevenir que o evento continue
+
+    // Só mostrar menu se tiver permissão
+    if (!canUpdateAllocation && !canDeleteAllocation) {
+      return;
+    }
+
+    const allocation = allocations.length === 1 ? allocations[0] : null;
+
+    // Não mostrar menu se não há alocação (clique esquerdo já faz isso)
+    if (!allocation) {
+      return;
+    }
+
+    setContextMenu({
+      allocation,
+      allocations,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  };
+
+  // Handler para atualizar status rapidamente
+  const handleQuickStatusChange = async (allocationId: string, newStatus: string) => {
+    try {
+      await updateAllocation(allocationId, { status: newStatus });
+      await refreshData(); // Atualizar dados após mudança
+    } catch (error: any) {
+      console.error('Erro ao atualizar status:', error);
+      throw error;
+    }
+  };
+
+  // Handler para excluir alocação rapidamente
+  const handleQuickDelete = async (allocationId: string) => {
+    try {
+      await deleteAllocation(allocationId);
+      await refreshData(); // Atualizar dados após exclusão
+    } catch (error: any) {
+      console.error('Erro ao excluir alocação:', error);
+      throw error;
+    }
   };
 
   const getAllocationsForSlot = (
@@ -535,7 +611,8 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                             ...(cellStyle.boxShadow && { boxShadow: cellStyle.boxShadow }),
                             ...(cellStyle.border && { border: cellStyle.border }),
                           }}
-                          onClick={() => handleCellClick(consultant, day, timeSlot, period, allocations)}
+                          onClick={(e) => handleCellClick(consultant, day, timeSlot, period, allocations, e)}
+                          onContextMenu={(e) => handleContextMenu(e, consultant, day, timeSlot, period, allocations)}
                           onMouseEnter={(e) => handleCellHover(e, allocations[0])}
                       onMouseLeave={() => setHoveredCell(null)}
                     >
@@ -578,6 +655,29 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
           allocation={hoveredCell.allocation}
           x={hoveredCell.x}
           y={hoveredCell.y}
+        />
+      )}
+
+      {/* Status Context Menu */}
+      {contextMenu && (
+        <StatusContextMenu
+          allocation={contextMenu.allocation}
+          allocations={contextMenu.allocations}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => {
+            setIsClosingContextMenu(true);
+            setContextMenu(null);
+            // Resetar o flag após um delay para permitir cliques normais
+            setTimeout(() => {
+              setIsClosingContextMenu(false);
+            }, 300);
+          }}
+          onStatusChange={handleQuickStatusChange}
+          onDelete={handleQuickDelete}
+          availableStatuses={statusConfigs || []}
+          canEdit={canUpdateAllocation}
+          canDelete={canDeleteAllocation}
         />
       )}
     </div>

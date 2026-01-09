@@ -35,6 +35,10 @@ const statusConfigSchema = new Schema<IStatusConfig>(
       type: Boolean,
       default: true,
     },
+    showInContextMenu: {
+      type: Boolean,
+      default: false, // Por padrão, não aparece no menu de contexto
+    },
   },
   {
     timestamps: true,

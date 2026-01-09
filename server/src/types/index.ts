@@ -140,6 +140,7 @@ export interface IStatusConfig extends Document {
   order: number;
   requiresProject: boolean;
   active: boolean;
+  showInContextMenu: boolean; // Se aparece no menu de contexto (botão direito)
   createdAt: Date;
   updatedAt: Date;
 }

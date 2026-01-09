@@ -26,6 +26,7 @@ export default function StatusConfig() {
     textColor: '#000000',
     order: 0,
     requiresProject: true,
+    showInContextMenu: false,
   });
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export default function StatusConfig() {
       textColor: '#000000',
       order: statuses.length + 1,
       requiresProject: true,
+      showInContextMenu: false,
     });
     setModalOpen(true);
   };
@@ -67,6 +69,7 @@ export default function StatusConfig() {
       textColor: status.textColor,
       order: status.order,
       requiresProject: status.requiresProject ?? true,
+      showInContextMenu: status.showInContextMenu || false,
     });
     setModalOpen(true);
   };
@@ -105,6 +108,24 @@ export default function StatusConfig() {
   const handleToggleActive = async (status: IStatusConfig) => {
     try {
       await statusConfigAPI.update(status._id || status.id, { active: !status.active });
+      fetchStatuses();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao atualizar status');
+    }
+  };
+
+  const handleToggleRequiresProject = async (status: IStatusConfig) => {
+    try {
+      await statusConfigAPI.update(status._id || status.id, { requiresProject: !(status.requiresProject !== false) });
+      fetchStatuses();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao atualizar status');
+    }
+  };
+
+  const handleToggleShowInContextMenu = async (status: IStatusConfig) => {
+    try {
+      await statusConfigAPI.update(status._id || status.id, { showInContextMenu: !status.showInContextMenu });
       fetchStatuses();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao atualizar status');
@@ -184,7 +205,8 @@ export default function StatusConfig() {
                 <th className="text-left px-4 py-4 text-sm font-semibold text-slate-600">Nome</th>
                 <th className="text-left px-4 py-4 text-sm font-semibold text-slate-600">Cor</th>
                 <th className="text-left px-4 py-4 text-sm font-semibold text-slate-600">Prévia</th>
-                <th className="text-center px-4 py-4 text-sm font-semibold text-slate-600">Projeto</th>
+                <th className="text-left px-4 py-4 text-sm font-semibold text-slate-600">Projeto</th>
+                <th className="text-left px-4 py-4 text-sm font-semibold text-slate-600">Atalho</th>
                 <th className="text-left px-4 py-4 text-sm font-semibold text-slate-600">Status</th>
                 <th className="text-right px-4 py-4 text-sm font-semibold text-slate-600">Ações</th>
               </tr>
@@ -224,12 +246,47 @@ export default function StatusConfig() {
                       {status.label}
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-center">
-                    {status.requiresProject !== false ? (
-                      <span className="text-green-600 text-xs font-medium">Sim</span>
-                    ) : (
-                      <span className="text-slate-400 text-xs">Não</span>
-                    )}
+                  <td className="px-4 py-4">
+                    <button
+                      onClick={() => handleToggleRequiresProject(status)}
+                      className={`
+                        flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors
+                        ${status.requiresProject !== false 
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        }
+                      `}
+                    >
+                      {status.requiresProject !== false ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          Sim
+                        </>
+                      ) : (
+                        'Não'
+                      )}
+                    </button>
+                  </td>
+                  <td className="px-4 py-4">
+                    <button
+                      onClick={() => handleToggleShowInContextMenu(status)}
+                      className={`
+                        flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors
+                        ${status.showInContextMenu 
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200' 
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        }
+                      `}
+                    >
+                      {status.showInContextMenu ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          Sim
+                        </>
+                      ) : (
+                        'Não'
+                      )}
+                    </button>
                   </td>
                   <td className="px-4 py-4">
                     <button
@@ -286,8 +343,8 @@ export default function StatusConfig() {
       {/* Modal */}
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
-          <div className="modal-content max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
+          <div className="modal-content max-w-md flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6 flex-shrink-0">
               <h2 className="text-xl font-bold text-slate-800">
                 {editingStatus ? 'Editar Status' : 'Novo Status'}
               </h2>
@@ -299,7 +356,7 @@ export default function StatusConfig() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4 flex-1 overflow-y-auto pr-2">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Chave (identificador) *
@@ -417,11 +474,28 @@ export default function StatusConfig() {
                 </label>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+              <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="showInContextMenu"
+                  checked={formData.showInContextMenu}
+                  onChange={(e) => setFormData(prev => ({ ...prev, showInContextMenu: e.target.checked }))}
+                  className="w-5 h-5 text-ngr-secondary rounded border-slate-300 focus:ring-ngr-secondary"
+                />
+                <label htmlFor="showInContextMenu" className="text-sm text-slate-700">
+                  <span className="font-medium">Mostrar no atalho</span>
+                  <p className="text-slate-500 text-xs mt-0.5">
+                    Se marcado, este status aparecerá no atalho (botão direito) da agenda, limitado a 4 status mais usados (ordenados por ordem)
+                  </p>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 mt-6 flex-shrink-0 sticky bottom-0 bg-white pb-2">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
                   className="btn-secondary"
+                  disabled={isSubmitting}
                 >
                   Cancelar
                 </button>

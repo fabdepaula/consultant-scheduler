@@ -94,6 +94,7 @@ export interface StatusConfig {
   order: number;
   requiresProject: boolean;
   active: boolean;
+  showInContextMenu?: boolean;
 }
 
 export interface FunctionConfig {

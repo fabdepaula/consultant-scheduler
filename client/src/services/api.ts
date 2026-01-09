@@ -157,10 +157,10 @@ export const statusConfigAPI = {
   getAll: () =>
     api.get('/status-config'),
   
-  create: (data: { key: string; label: string; color: string; textColor?: string; order?: number }) =>
+  create: (data: { key: string; label: string; color: string; textColor?: string; order?: number; requiresProject?: boolean; showInContextMenu?: boolean }) =>
     api.post('/status-config', data),
   
-  update: (id: string, data: Partial<{ key: string; label: string; color: string; textColor: string; order: number; active: boolean }>) =>
+  update: (id: string, data: Partial<{ key: string; label: string; color: string; textColor: string; order: number; active: boolean; requiresProject: boolean; showInContextMenu: boolean }>) =>
     api.put(`/status-config/${id}`, data),
   
   delete: (id: string) =>

@@ -38,15 +38,15 @@ const functionConfigs = [
 
 // Configuração dos status
 const statusConfigs = [
-  { key: 'confirmado_presencial', label: 'Confirmado Presencial', color: '#FFFF00', textColor: '#000000', order: 1, requiresProject: true },
-  { key: 'confirmado_remoto', label: 'Confirmado Remoto', color: '#ffffff', textColor: '#000000', order: 2, requiresProject: true },
-  { key: 'a_confirmar', label: 'À Confirmar', color: '#4472C4', textColor: '#FFFFFF', order: 3, requiresProject: true },
-  { key: 'livre', label: 'Livre', color: '#a9e5b5', textColor: '#000000', order: 4, requiresProject: false },
-  { key: 'bloqueado', label: 'Bloqueado', color: '#A6A6A6', textColor: '#FFFFFF', order: 5, requiresProject: false },
-  { key: 'conflito', label: 'Conflito', color: '#FF0000', textColor: '#FFFFFF', order: 6, requiresProject: true },
-  { key: 'ponte', label: 'Ponte', color: '#BFBFBF', textColor: '#000000', order: 7, requiresProject: false },
-  { key: 'feriado', label: 'Feriado', color: '#A6A6A6', textColor: '#FFFFFF', order: 8, requiresProject: false },
-  { key: 'fim_semana', label: 'Final de Semana', color: '#D9D9D9', textColor: '#000000', order: 9, requiresProject: false },
+  { key: 'confirmado_presencial', label: 'Confirmado Presencial', color: '#FFFF00', textColor: '#000000', order: 1, requiresProject: true, showInContextMenu: true },
+  { key: 'confirmado_remoto', label: 'Confirmado Remoto', color: '#ffffff', textColor: '#000000', order: 2, requiresProject: true, showInContextMenu: true },
+  { key: 'a_confirmar', label: 'À Confirmar', color: '#4472C4', textColor: '#FFFFFF', order: 3, requiresProject: true, showInContextMenu: true },
+  { key: 'livre', label: 'Livre', color: '#a9e5b5', textColor: '#000000', order: 4, requiresProject: false, showInContextMenu: true },
+  { key: 'bloqueado', label: 'Bloqueado', color: '#A6A6A6', textColor: '#FFFFFF', order: 5, requiresProject: false, showInContextMenu: false },
+  { key: 'conflito', label: 'Conflito', color: '#FF0000', textColor: '#FFFFFF', order: 6, requiresProject: true, showInContextMenu: false },
+  { key: 'ponte', label: 'Ponte', color: '#BFBFBF', textColor: '#000000', order: 7, requiresProject: false, showInContextMenu: false },
+  { key: 'feriado', label: 'Feriado', color: '#A6A6A6', textColor: '#FFFFFF', order: 8, requiresProject: false, showInContextMenu: false },
+  { key: 'fim_semana', label: 'Final de Semana', color: '#D9D9D9', textColor: '#000000', order: 9, requiresProject: false, showInContextMenu: false },
 ];
 
 // Permissões do sistema

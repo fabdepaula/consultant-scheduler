@@ -14,7 +14,7 @@ export const getAllStatuses = async (req: Request, res: Response, next: NextFunc
 // Create new status
 export const createStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { key, label, color, textColor, order } = req.body;
+    const { key, label, color, textColor, order, requiresProject, showInContextMenu } = req.body;
 
     // Check if key already exists
     const existing = await StatusConfig.findOne({ key: key.toLowerCase() });
@@ -28,6 +28,8 @@ export const createStatus = async (req: Request, res: Response, next: NextFuncti
       color,
       textColor: textColor || '#000000',
       order: order || 0,
+      requiresProject: requiresProject !== undefined ? requiresProject : true,
+      showInContextMenu: showInContextMenu || false,
     });
 
     res.status(201).json({
@@ -42,7 +44,7 @@ export const createStatus = async (req: Request, res: Response, next: NextFuncti
 // Update status
 export const updateStatus = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { label, color, textColor, order, active } = req.body;
+    const { label, color, textColor, order, active, requiresProject, showInContextMenu } = req.body;
     const statusId = req.params.id;
 
     const status = await StatusConfig.findById(statusId);
@@ -55,6 +57,8 @@ export const updateStatus = async (req: Request, res: Response, next: NextFuncti
     if (textColor !== undefined) status.textColor = textColor;
     if (order !== undefined) status.order = order;
     if (active !== undefined) status.active = active;
+    if (requiresProject !== undefined) status.requiresProject = requiresProject;
+    if (showInContextMenu !== undefined) status.showInContextMenu = showInContextMenu;
 
     await status.save();
 
