@@ -19,6 +19,7 @@ import {
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useInactivityTimeout } from '../../hooks/useInactivityTimeout';
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Para mobile
@@ -30,6 +31,7 @@ export default function Layout() {
   const { user, logout } = useAuthStore();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+  const { InactivityWarningComponent } = useInactivityTimeout();
 
   // Salvar preferência no localStorage
   useEffect(() => {
@@ -219,6 +221,9 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
+      
+      {/* Modal de aviso de inatividade */}
+      {InactivityWarningComponent}
     </div>
   );
 }

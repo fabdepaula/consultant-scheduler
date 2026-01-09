@@ -46,6 +46,8 @@ Sistema web para gerenciamento de agenda de consultores de TI da NGR Global.
 - ✅ Detecção automática de conflitos
 - ✅ Rastreamento de quem criou cada alocação
 - ✅ Atualização automática em tempo real (configurável via variável de ambiente)
+- ✅ Timeout de inatividade com aviso (logout automático após período sem atividade)
+- ✅ Logs de acesso ao sistema (últimas 32 horas, apenas para administradores)
 
 ## 🎨 Layout
 
@@ -240,6 +242,46 @@ O sistema possui atualização automática em tempo real da agenda. O intervalo 
 - **Máximo:** 300000 (5 minutos)
 
 **Nota:** Se a variável não for definida, o sistema usa o valor padrão de 30 segundos (30000ms).
+
+### Timeout de Inatividade
+
+O sistema possui um mecanismo de timeout de inatividade que desconecta automaticamente o usuário após um período sem atividade, melhorando a segurança do sistema.
+
+**Como funciona:**
+- Após **30 minutos** de inatividade, o sistema mostra um aviso
+- O usuário tem **5 minutos** para clicar em "Continuar" e manter a sessão ativa
+- Se não houver interação, o logout é realizado automaticamente
+- Qualquer atividade do usuário (mouse, teclado, scroll) reinicia o timer
+
+**Como configurar:**
+
+1. Edite o arquivo `client/src/hooks/useInactivityTimeout.tsx`
+2. Modifique as constantes no início do arquivo:
+
+```typescript
+// Configurações (em milissegundos)
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutos - tempo total de inatividade
+const WARNING_TIME = 5 * 60 * 1000; // 5 minutos - quando mostrar o aviso (antes do timeout)
+const WARNING_DURATION = 5 * 60 * 1000; // 5 minutos - tempo do aviso até logout
+```
+
+**Exemplos de configuração:**
+
+| Cenário | INACTIVITY_TIMEOUT | WARNING_TIME | WARNING_DURATION |
+|---------|-------------------|--------------|------------------|
+| Padrão (30 min) | 30 * 60 * 1000 | 5 * 60 * 1000 | 5 * 60 * 1000 |
+| Mais restritivo (15 min) | 15 * 60 * 1000 | 3 * 60 * 1000 | 3 * 60 * 1000 |
+| Menos restritivo (60 min) | 60 * 60 * 1000 | 10 * 60 * 1000 | 10 * 60 * 1000 |
+
+**Eventos que resetam o timer:**
+- Movimento do mouse
+- Cliques
+- Digitação no teclado
+- Scroll na página
+- Toque na tela (mobile)
+- Foco na janela do navegador
+
+**Nota:** Após modificar as configurações, é necessário recompilar o frontend (`npm run build` em produção ou reiniciar o servidor de desenvolvimento).
 
 ## 📄 Licença
 
