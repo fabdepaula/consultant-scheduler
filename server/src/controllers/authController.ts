@@ -3,6 +3,7 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import { JwtPayload } from '../types/index.js';
+import { createLoginLog, updateLogoutLog } from './sessionLogController.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
@@ -81,6 +82,11 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     // Generate token
     const token = generateToken(user);
+
+    // Registrar log de login
+    const ipAddress = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    await createLoginLog(user._id.toString(), ipAddress, userAgent);
 
     // Buscar role com permissões e allowedTeams populadas
     const userWithRole = await User.findById(user._id)
@@ -209,6 +215,19 @@ export const forceChangePassword = async (req: Request, res: Response, next: Nex
         mustChangePassword: false,
       }
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Logout
+export const logout = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?._id;
+    if (userId) {
+      await updateLogoutLog(userId.toString());
+    }
+    res.json({ message: 'Logout registrado com sucesso' });
   } catch (error) {
     next(error);
   }

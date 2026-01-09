@@ -14,6 +14,9 @@ router.get('/profile', authenticate, authController.getProfile);
 router.put('/password', authenticate, authController.updatePassword);
 router.put('/force-change-password', authenticate, authController.forceChangePassword);
 
+// Logout
+router.post('/logout', authenticate, authController.logout);
+
 // Google OAuth
 router.get(
   '/google',

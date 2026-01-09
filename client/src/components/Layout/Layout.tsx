@@ -36,8 +36,8 @@ export default function Layout() {
     localStorage.setItem('sidebarExpanded', sidebarExpanded.toString());
   }, [sidebarExpanded]);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -62,6 +62,7 @@ export default function Layout() {
     ...(canManageRoles ? [{ to: '/perfis', icon: Shield, label: 'Perfis' }] : []),
     ...(canViewExternalData ? [{ to: '/dados-externos', icon: Database, label: 'Dados Externos' }] : []),
     ...(canManageMiddleware ? [{ to: '/middleware', icon: Activity, label: 'Middleware' }] : []),
+    ...(isAdmin ? [{ to: '/logs-acesso', icon: Activity, label: 'Logs de Acesso' }] : []),
   ];
 
   return (
@@ -77,7 +78,7 @@ export default function Layout() {
       {/* Sidebar */}
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-50
-        bg-ngr-primary text-white
+        bg-ngr-primary text-white sidebar-ngr
         transform transition-all duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         ${sidebarExpanded ? 'w-64' : 'w-20'}
@@ -120,34 +121,38 @@ export default function Layout() {
           </div>
 
           {/* Navigation */}
-          <nav className={`flex-1 py-6 space-y-2 transition-all duration-300 ${
-            sidebarExpanded ? 'px-4' : 'px-2'
-          }`}>
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                onClick={() => setSidebarOpen(false)}
-                className={({ isActive }) => `
-                  flex items-center gap-3 rounded-xl transition-all duration-200
-                  ${isActive 
-                    ? 'bg-white/20 text-white border border-white/30' 
-                    : 'text-blue-100 hover:bg-white/10 hover:text-white'
-                  }
-                  ${sidebarExpanded ? 'px-4 py-3' : 'px-3 py-3 justify-center'}
-                `}
-                title={!sidebarExpanded ? item.label : ''}
-              >
-                <item.icon className="w-5 h-5 flex-shrink-0" />
-                {sidebarExpanded && (
-                  <span className="font-medium whitespace-nowrap">{item.label}</span>
-                )}
-              </NavLink>
-            ))}
-          </nav>
+          <div className="flex-1 relative overflow-hidden">
+            <nav className={`h-full py-6 space-y-2 overflow-y-auto transition-all duration-300 ${
+              sidebarExpanded ? 'px-4' : 'px-2'
+            }`}>
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setSidebarOpen(false)}
+                  className={({ isActive }) => `
+                    flex items-center gap-3 rounded-xl transition-all duration-200
+                    ${isActive 
+                      ? 'bg-white/20 text-white border border-white/30' 
+                      : 'text-blue-100 hover:bg-white/10 hover:text-white'
+                    }
+                    ${sidebarExpanded ? 'px-4 py-3' : 'px-3 py-3 justify-center'}
+                  `}
+                  title={!sidebarExpanded ? item.label : ''}
+                >
+                  <item.icon className="w-5 h-5 flex-shrink-0" />
+                  {sidebarExpanded && (
+                    <span className="font-medium whitespace-nowrap">{item.label}</span>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+            {/* Gradiente sutil na parte inferior para indicar scroll */}
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-ngr-primary to-transparent pointer-events-none"></div>
+          </div>
 
-          {/* User section */}
-          <div className={`py-4 border-t border-ngr-secondary/30 transition-all duration-300 ${
+          {/* User section - fixo na parte inferior */}
+          <div className={`py-4 border-t border-ngr-secondary/30 flex-shrink-0 bg-ngr-primary transition-all duration-300 ${
             sidebarExpanded ? 'px-4' : 'px-2'
           }`}>
             <div className={`flex items-center gap-3 bg-white/10 rounded-xl mb-3 transition-all duration-300 ${

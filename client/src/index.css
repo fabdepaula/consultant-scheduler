@@ -55,6 +55,24 @@ body {
   background: var(--ngr-secondary);
 }
 
+/* Custom scrollbar para sidebar (mais discreto) */
+.sidebar-ngr nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-ngr nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-ngr nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.sidebar-ngr nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 /* Grid cell styles */
 .grid-cell {
   @apply border border-slate-200 min-h-[40px] text-xs flex items-center justify-center transition-all duration-150;

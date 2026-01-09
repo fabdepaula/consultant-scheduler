@@ -11,7 +11,7 @@ interface AuthState {
   error: string | null;
   initialized: boolean;
   login: (email: string, password: string) => Promise<{ mustChangePassword: boolean }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
   forceChangePassword: (newPassword: string) => Promise<void>;
@@ -59,18 +59,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    set({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      isLoading: false,
-      mustChangePassword: false,
-      error: null,
-      initialized: true,
-    });
+  logout: async () => {
+    try {
+      // Registrar logout no backend
+      await authAPI.logout();
+    } catch (error) {
+      console.error('[AUTH] Erro ao registrar logout:', error);
+      // Continua com logout mesmo se falhar
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      set({
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+        mustChangePassword: false,
+        error: null,
+        initialized: true,
+      });
+    }
   },
 
   checkAuth: async () => {

@@ -9,6 +9,7 @@ import './config/passport.js';
 import routes from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { initSyncScheduler } from './jobs/syncScheduler.js';
+import { initSessionLogCleanup } from './jobs/sessionLogCleanup.js';
 
 dotenv.config();
 
@@ -105,6 +106,9 @@ const startServer = async () => {
     initSyncScheduler().catch((err) => {
       console.warn('⚠️ Scheduler init failed:', err);
     });
+    
+    // Inicia job de limpeza de logs de sessão
+    initSessionLogCleanup();
     
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);

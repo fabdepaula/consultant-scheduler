@@ -13,6 +13,7 @@ import Teams from './pages/Teams';
 import ExternalData from './pages/ExternalData';
 import Middleware from './pages/Middleware';
 import Roles from './pages/Roles';
+import SessionLogs from './pages/SessionLogs';
 import Layout from './components/Layout/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -205,6 +206,11 @@ function App() {
             <PermissionRoute anyPermission={['middleware.view', 'middleware.create', 'middleware.update', 'middleware.execute']}>
               <Middleware />
             </PermissionRoute>
+          } />
+          <Route path="logs-acesso" element={
+            <PrivateRoute>
+              <SessionLogs />
+            </PrivateRoute>
           } />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

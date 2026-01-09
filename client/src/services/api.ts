@@ -52,6 +52,8 @@ export const authAPI = {
 
   forceChangePassword: (newPassword: string) =>
     api.put('/auth/force-change-password', { newPassword }),
+  
+  logout: () => api.post('/auth/logout'),
 };
 
 // Users API
@@ -277,4 +279,11 @@ export const middlewareAPI = {
 // System Config API
 export const systemAPI = {
   getConfig: () => api.get('/system/config'),
+};
+
+// Session Logs API
+export const sessionLogsAPI = {
+  getAll: (params?: { page?: number; limit?: number; userId?: string; search?: string }) =>
+    api.get('/session-logs', { params }),
+  getStats: () => api.get('/session-logs/stats'),
 };

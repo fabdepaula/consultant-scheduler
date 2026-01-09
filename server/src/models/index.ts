@@ -7,3 +7,4 @@ export { default as Team } from './Team.js';
 export { default as DataSyncConfig } from './DataSyncConfig.js';
 export { default as Permission } from './Permission.js';
 export { default as Role } from './Role.js';
+export { default as SessionLog } from './SessionLog.js';

@@ -11,6 +11,7 @@ import dataSyncRoutes from './dataSyncRoutes.js';
 import roleRoutes from './roleRoutes.js';
 import permissionRoutes from './permissionRoutes.js';
 import systemRoutes from './systemRoutes.js';
+import sessionLogRoutes from './sessionLogRoutes.js';
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.use('/middleware', dataSyncRoutes);
 router.use('/roles', roleRoutes);
 router.use('/permissions', permissionRoutes);
 router.use('/system', systemRoutes);
+router.use('/session-logs', sessionLogRoutes);
 
 // Health check
 router.get('/health', (req, res) => {
