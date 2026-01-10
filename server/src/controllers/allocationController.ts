@@ -221,12 +221,21 @@ export const getAgendaAllocations = async (req: Request, res: Response, next: Ne
       .sort({ consultantId: 1, date: 1, timeSlot: 1 });
 
     // Group allocations by consultant and date
+    // IMPORTANTE: Para evitar problemas de timezone ao agrupar, usar UTC ao formatar
+    // A data do MongoDB vem como Date em UTC, então usamos UTC para criar a chave
+    // Isso garante que a chave será consistente independente do timezone do servidor
     const grouped: Record<string, Record<string, any[]>> = {};
     
     allocations.forEach((allocation) => {
       const consultantId = allocation.consultantId._id.toString();
-      // Usar formatação local em vez de toISOString para evitar problemas de timezone
-      const dateKey = formatDateLocal(allocation.date);
+      
+      // Converter Date para string "yyyy-MM-dd" usando UTC
+      // Isso garante que independente do timezone do servidor, a chave será a mesma
+      const dateObj = allocation.date instanceof Date ? allocation.date : new Date(allocation.date);
+      const year = dateObj.getUTCFullYear();
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+      const dateKey = `${year}-${month}-${day}`;
       
       if (!grouped[consultantId]) {
         grouped[consultantId] = {};

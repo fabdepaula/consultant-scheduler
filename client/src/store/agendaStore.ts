@@ -48,7 +48,8 @@ interface AgendaState {
 }
 
 // Helper para formatar data de forma segura (sem problemas de timezone)
-// Sempre usa métodos nativos que retornam valores no timezone local
+// IMPORTANTE: Datas que vêm do backend/MongoDB estão em UTC
+// Para manter consistência com o backend, sempre usar UTC ao formatar
 const formatDateSafe = (date: Date | string): string => {
   // Se já é string no formato "yyyy-MM-dd", retornar como está
   if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -58,10 +59,13 @@ const formatDateSafe = (date: Date | string): string => {
   // Converter para Date se necessário
   const dateObj = date instanceof Date ? date : new Date(date);
   
-  // Usar métodos nativos que sempre retornam valores no timezone local
-  const year = dateObj.getFullYear();
-  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-  const day = String(dateObj.getDate()).padStart(2, '0');
+  // IMPORTANTE: Usar UTC para formatar datas que vêm do backend
+  // Isso garante que a chave será consistente com o que o backend criou
+  // O backend salva datas como "2026-01-12T12:00:00.000Z" (UTC meio-dia)
+  // E agrupa usando UTC, então devemos usar UTC aqui também
+  const year = dateObj.getUTCFullYear();
+  const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getUTCDate()).padStart(2, '0');
   
   return `${year}-${month}-${day}`;
 };

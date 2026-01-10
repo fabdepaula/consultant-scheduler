@@ -138,21 +138,32 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
   } | null>(null);
   const [isClosingContextMenu, setIsClosingContextMenu] = useState(false);
 
-  // Helper para normalizar data (meio-dia local) e evitar problemas de timezone
+  // Helper para normalizar data (meio-dia UTC) e evitar problemas de timezone
+  // IMPORTANTE: Usar UTC para manter consistência com o backend
+  // O backend cria chaves usando UTC, então precisamos usar UTC aqui também
   const normalizeDate = (date: Date): Date => {
-    // Criar uma nova data usando apenas ano, mês e dia no timezone local
-    // Definir para meio-dia (12:00) para evitar problemas de timezone ao converter
-    // Usar construtor do Date com parâmetros individuais garante timezone local
-    const normalized = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0);
+    // Extrair ano, mês e dia no timezone local (para garantir que pegamos o dia correto que o usuário vê)
+    // Mas criar a data em UTC para manter consistência
+    // Quando o usuário vê "12/01", queremos criar "2026-01-12T12:00:00.000Z"
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    
+    // Criar data em UTC usando Date.UTC
+    // Isso garante que a data será "2026-01-12T12:00:00.000Z" independente do timezone do cliente
+    const normalized = new Date(Date.UTC(year, month, day, 12, 0, 0, 0));
     return normalized;
   };
 
   // Helper para formatar data de forma segura (sem problemas de timezone)
-  // Deve ser usado em todos os lugares onde formatamos data para chave/comparação
+  // IMPORTANTE: Para manter consistência com o backend e groupedAllocations,
+  // usar UTC para formatar. O backend cria chaves usando UTC, então devemos usar UTC aqui também
   const formatDateSafe = (date: Date): string => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    // Usar UTC para garantir consistência com o backend
+    // Isso garante que a chave criada aqui bate com a chave criada no backend
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
 
