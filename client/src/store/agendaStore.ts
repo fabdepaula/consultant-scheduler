@@ -18,7 +18,7 @@ interface AgendaState {
   // Actions
   fetchConsultants: (includeInactive?: boolean) => Promise<void>;
   fetchProjects: () => Promise<void>;
-  fetchAllocations: (startDate: Date, endDate: Date, silent?: boolean) => Promise<void>;
+  fetchAllocations: (startDate: Date, endDate: Date, silent?: boolean, forceUpdate?: boolean) => Promise<void>;
   fetchStatusConfigs: () => Promise<void>;
   setCurrentWeek: (date: Date) => void;
   setWeeksToShow: (weeks: number) => void;
@@ -29,8 +29,9 @@ interface AgendaState {
   // Allocation actions
   createAllocation: (data: any) => Promise<void>;
   createBulkAllocations: (data: BulkAllocationData) => Promise<void>;
-  updateAllocation: (id: string, data: any) => Promise<void>;
-  deleteAllocation: (id: string) => Promise<void>;
+  updateAllocation: (id: string, data: any, optimistic?: boolean) => Promise<void>;
+  deleteAllocation: (id: string, optimistic?: boolean) => Promise<void>;
+  updateAllocationLocally: (id: string, updates: Partial<Allocation>) => void;
   
   // Consultant actions
   createConsultant: (data: any) => Promise<void>;
@@ -43,8 +44,62 @@ interface AgendaState {
   deleteProject: (id: string) => Promise<void>;
   
   clearError: () => void;
-  refreshData: () => Promise<void>;
+  refreshData: (silent?: boolean) => Promise<void>;
 }
+
+// Helper para formatar data de forma segura (sem problemas de timezone)
+// Sempre usa métodos nativos que retornam valores no timezone local
+const formatDateSafe = (date: Date | string): string => {
+  // Se já é string no formato "yyyy-MM-dd", retornar como está
+  if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return date;
+  }
+  
+  // Converter para Date se necessário
+  const dateObj = date instanceof Date ? date : new Date(date);
+  
+  // Usar métodos nativos que sempre retornam valores no timezone local
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+};
+
+// Função helper para construir groupedAllocations a partir do array de allocations
+// Isso garante consistência e novas referências sempre que necessário
+const buildGroupedAllocations = (allocations: Allocation[]): Record<string, Record<string, Allocation[]>> => {
+  const grouped: Record<string, Record<string, Allocation[]>> = {};
+  
+  allocations.forEach((allocation: Allocation) => {
+    // Normalizar consultantId (pode ser string ou objeto populado)
+    let consultantId: string;
+    if (typeof allocation.consultantId === 'string') {
+      consultantId = allocation.consultantId;
+    } else if (allocation.consultantId && typeof allocation.consultantId === 'object') {
+      consultantId = (allocation.consultantId as any)?._id?.toString() || (allocation.consultantId as any)?.id?.toString() || '';
+    } else {
+      consultantId = '';
+    }
+    
+    if (!consultantId) return; // Pular se não tiver consultantId válido
+    
+    // Usar formatDateSafe em vez de format para evitar problemas de timezone
+    // allocation.date pode vir como Date do MongoDB ou string ISO
+    const dateKey = formatDateSafe(allocation.date);
+    
+    if (!grouped[consultantId]) {
+      grouped[consultantId] = {};
+    }
+    if (!grouped[consultantId][dateKey]) {
+      grouped[consultantId][dateKey] = [];
+    }
+    
+    grouped[consultantId][dateKey].push(allocation);
+  });
+  
+  return grouped;
+};
 
 export const useAgendaStore = create<AgendaState>((set, get) => ({
   consultants: [],
@@ -90,7 +145,7 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
     }
   },
 
-  fetchAllocations: async (startDate: Date, endDate: Date, silent = false) => {
+  fetchAllocations: async (startDate: Date, endDate: Date, silent = false, forceUpdate = false) => {
     try {
       // Apenas definir isLoading se não for uma atualização silenciosa
       if (!silent) {
@@ -102,43 +157,53 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
         format(endDate, 'yyyy-MM-dd')
       );
       
-      // Comparar com dados existentes para evitar atualização desnecessária
-      const currentAllocations = get().allocations;
-      const currentGrouped = get().groupedAllocations;
-      const newAllocations = response.data.allocations;
-      const newGrouped = response.data.grouped;
+      const newAllocations = response.data.allocations || [];
       
-      // Verificar se houve mudanças reais (comparação por IDs e timestamps)
-      // Se não houver alocações anteriores, sempre atualizar (primeira carga)
-      const hasChanges = currentAllocations.length === 0 || 
-        JSON.stringify(currentAllocations.map((a: Allocation) => ({ 
-          id: a._id || a.id, 
-          status: a.status, 
-          projectId: a.projectId, 
-          consultantId: a.consultantId,
-          date: a.date,
-          timeSlot: a.timeSlot 
-        }))) !== JSON.stringify(newAllocations.map((a: Allocation) => ({ 
-          id: a._id || a.id, 
-          status: a.status, 
-          projectId: a.projectId, 
-          consultantId: a.consultantId,
-          date: a.date,
-          timeSlot: a.timeSlot 
-        }))) ||
-        JSON.stringify(currentGrouped) !== JSON.stringify(newGrouped);
-      
-      // Só atualizar se houver mudanças ou se não for silencioso (primeira carga)
-      if (hasChanges || !silent) {
-        set({
-          allocations: newAllocations,
-          groupedAllocations: newGrouped,
-          isLoading: false,
-        });
-      } else if (!silent) {
-        // Se não houver mudanças mas não for silencioso, apenas remover loading
-        set({ isLoading: false });
+      // Se for silencioso (polling) E não for forçado, comparar para evitar atualização desnecessária
+      if (silent && !forceUpdate) {
+        const currentAllocations = get().allocations;
+        
+        // Comparação rápida: verificar se os IDs e status principais mudaram
+        // Usar formatDateSafe para evitar problemas de timezone na comparação
+        const currentIds = currentAllocations.map((a: Allocation) => ({
+          id: a._id || a.id,
+          status: a.status,
+          projectId: typeof a.projectId === 'string' ? a.projectId : (a.projectId as any)?._id || (a.projectId as any)?.id,
+          consultantId: typeof a.consultantId === 'string' ? a.consultantId : (a.consultantId as any)?._id || (a.consultantId as any)?.id,
+          date: formatDateSafe(a.date),
+          timeSlot: a.timeSlot
+        })).sort((a: { id?: string }, b: { id?: string }) => (a.id || '').localeCompare(b.id || ''));
+        
+        const newIds = newAllocations.map((a: Allocation) => ({
+          id: a._id || a.id,
+          status: a.status,
+          projectId: typeof a.projectId === 'string' ? a.projectId : (a.projectId as any)?._id || (a.projectId as any)?.id,
+          consultantId: typeof a.consultantId === 'string' ? a.consultantId : (a.consultantId as any)?._id || (a.consultantId as any)?.id,
+          date: formatDateSafe(a.date),
+          timeSlot: a.timeSlot
+        })).sort((a: { id?: string }, b: { id?: string }) => (a.id || '').localeCompare(b.id || ''));
+        
+        const hasChanges = JSON.stringify(currentIds) !== JSON.stringify(newIds);
+        
+        // Se não houver mudanças e for silencioso E não forçado, não atualizar
+        if (!hasChanges) {
+          // Remover loading se estava definido
+          if (!silent) {
+            set({ isLoading: false });
+          }
+          return;
+        }
       }
+      
+      // Sempre atualizar se não for silencioso (refresh forçado) ou se detectou mudanças ou se forceUpdate=true
+      // Usar helper para construir groupedAllocations a partir do array (garante consistência)
+      const rebuiltGrouped = buildGroupedAllocations(newAllocations);
+      
+      set({
+        allocations: [...newAllocations],
+        groupedAllocations: rebuiltGrouped, // Nova estrutura reconstruída
+        isLoading: false,
+      });
     } catch (error: any) {
       set({
         error: error.response?.data?.message || 'Erro ao carregar alocações',
@@ -219,21 +284,96 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
     }
   },
 
-  updateAllocation: async (id, data) => {
+  updateAllocationLocally: (id, updates) => {
+    const state = get();
+    
+    // Encontrar a alocação atual
+    const currentAllocation = state.allocations.find((a: Allocation) => {
+      const allocationId = a._id || a.id;
+      return allocationId === id || allocationId?.toString() === id?.toString();
+    });
+
+    if (!currentAllocation) {
+      console.warn('Alocação não encontrada para atualização local:', id);
+      return;
+    }
+
+    // Atualizar alocação no array (criar nova referência)
+    const updatedAllocations = state.allocations.map((a: Allocation) => {
+      const allocationId = a._id || a.id;
+      if (allocationId === id || allocationId?.toString() === id?.toString()) {
+        // Criar nova alocação com updates aplicados
+        return { ...a, ...updates };
+      }
+      return a; // Retornar referência existente se não for a alocação atualizada
+    });
+
+    // RECONSTRUIR groupedAllocations do zero usando helper
+    // Isso garante que sempre teremos a estrutura correta e novas referências
+    const newGrouped = buildGroupedAllocations(updatedAllocations);
+
+    // Atualizar estado com novas referências - isso garantirá que o React detecte a mudança
+    set({ 
+      allocations: updatedAllocations, // Nova referência do array
+      groupedAllocations: newGrouped   // Nova estrutura completamente reconstruída
+    });
+  },
+
+  updateAllocation: async (id, data, optimistic = true) => {
     try {
+      // 1. Atualização otimista (imediata na UI) - apenas para mudanças rápidas como status
+      if (optimistic) {
+        // Atualizar localmente apenas o campo que está sendo alterado
+        get().updateAllocationLocally(id, data);
+      }
+
+      // 2. Chamada à API
       await allocationsAPI.update(id, data);
-      await get().refreshData();
+
+      // 3. Após sucesso da API, SEMPRE fazer refresh completo para garantir sincronização
+      // Se foi otimista, fazer refresh silencioso (sem loading) mas forçado
+      // Se não foi otimista, fazer refresh completo com loading
+      await get().refreshData(optimistic); // silent=optimistic, forceUpdate=true
     } catch (error: any) {
+      // Em caso de erro, reverter fazendo refresh completo
+      if (optimistic) {
+        await get().refreshData();
+      }
       set({ error: error.response?.data?.message || 'Erro ao atualizar alocação' });
       throw error;
     }
   },
 
-  deleteAllocation: async (id) => {
+  deleteAllocation: async (id, optimistic = true) => {
     try {
+      // 1. Remover localmente imediatamente (se otimista)
+      if (optimistic) {
+        const state = get();
+        
+        // Remover do array de alocações
+        const updatedAllocations = state.allocations.filter((a: Allocation) => {
+          const allocationId = a._id || a.id;
+          return allocationId !== id && allocationId?.toString() !== id?.toString();
+        });
+
+        // RECONSTRUIR groupedAllocations do zero usando helper
+        const newGrouped = buildGroupedAllocations(updatedAllocations);
+
+        set({ 
+          allocations: updatedAllocations,
+          groupedAllocations: newGrouped 
+        });
+      }
+
+      // 2. Chamada à API
       await allocationsAPI.delete(id);
+
+      // 3. Após sucesso, SEMPRE fazer refresh completo para garantir sincronização
+      // Usar refreshData() que sempre força atualização
       await get().refreshData();
     } catch (error: any) {
+      // Em caso de erro, fazer refresh completo para restaurar estado correto
+      await get().refreshData();
       set({ error: error.response?.data?.message || 'Erro ao remover alocação' });
       throw error;
     }
@@ -299,10 +439,12 @@ export const useAgendaStore = create<AgendaState>((set, get) => ({
     }
   },
 
-  refreshData: async () => {
+  refreshData: async (silent = false) => {
     const { currentWeekStart, weeksToShow } = get();
-    const endDate = endOfWeek(addWeeks(currentWeekStart, weeksToShow - 1), { weekStartsOn: 1 });
-    await get().fetchAllocations(currentWeekStart, endDate);
+    const startDate = startOfWeek(currentWeekStart, { weekStartsOn: 1 });
+    const endDate = endOfWeek(addWeeks(startDate, weeksToShow - 1), { weekStartsOn: 1 });
+    // Sempre forçar atualização (forceUpdate=true), mas pode ser silencioso
+    await get().fetchAllocations(startDate, endDate, silent, true);
   },
 
   clearError: () => set({ error: null }),

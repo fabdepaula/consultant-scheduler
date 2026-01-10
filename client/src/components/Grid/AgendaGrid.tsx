@@ -40,9 +40,10 @@ interface AgendaGridProps {
   selectedManager?: string;
   selectedTeams?: string[];
   onModalOpenChange?: (isOpen: boolean) => void;
+  onUserAction?: () => void;
 }
 
-export default function AgendaGrid({ selectedProject, selectedManager, selectedTeams = [], onModalOpenChange }: AgendaGridProps = {}) {
+export default function AgendaGrid({ selectedProject, selectedManager, selectedTeams = [], onModalOpenChange, onUserAction }: AgendaGridProps = {}) {
   const { 
     consultants, 
     groupedAllocations, 
@@ -54,8 +55,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
     statusConfigs,
     isLoading,
     updateAllocation,
-    deleteAllocation,
-    refreshData
+    deleteAllocation
   } = useAgendaStore();
   const { user } = useAuthStore();
   const { hasPermission } = usePermissions();
@@ -138,9 +138,31 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
   } | null>(null);
   const [isClosingContextMenu, setIsClosingContextMenu] = useState(false);
 
+  // Helper para normalizar data (meio-dia local) e evitar problemas de timezone
+  const normalizeDate = (date: Date): Date => {
+    // Criar uma nova data usando apenas ano, mês e dia no timezone local
+    // Definir para meio-dia (12:00) para evitar problemas de timezone ao converter
+    // Usar construtor do Date com parâmetros individuais garante timezone local
+    const normalized = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0, 0);
+    return normalized;
+  };
+
+  // Helper para formatar data de forma segura (sem problemas de timezone)
+  // Deve ser usado em todos os lugares onde formatamos data para chave/comparação
+  const formatDateSafe = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Generate days for all weeks
   const totalDays = 7 * weeksToShow;
-  const weekDays = Array.from({ length: totalDays }, (_, i) => addDays(currentWeekStart, i));
+  const weekDays = Array.from({ length: totalDays }, (_, i) => {
+    const day = addDays(currentWeekStart, i);
+    // Normalizar cada dia para meio-dia local para evitar problemas de timezone
+    return normalizeDate(day);
+  });
 
   const handleCellClick = (
     consultant: User,
@@ -162,9 +184,12 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
     // Se não há nenhuma, abre para criar nova (apenas admins podem criar)
     const singleAllocation = allocations.length === 1 ? allocations[0] : undefined;
     
+    // Normalizar a data antes de passar para o modal para garantir que não haja problemas de timezone
+    const normalizedDate = normalizeDate(date);
+    
     setSelectedCell({ 
       consultant, 
-      date, 
+      date: normalizedDate, 
       timeSlot, 
       period, 
       allocation: singleAllocation,
@@ -222,24 +247,56 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
     });
   };
 
-  // Handler para atualizar status rapidamente
+  // Handler para atualizar status rapidamente (com optimistic update)
   const handleQuickStatusChange = async (allocationId: string, newStatus: string) => {
     try {
-      await updateAllocation(allocationId, { status: newStatus });
-      await refreshData(); // Atualizar dados após mudança
+      // VALIDAÇÃO: Verificar se o novo status requer projeto
+      const newStatusConfig = statusConfigs?.find((config) => config.key === newStatus && config.active);
+      if (newStatusConfig && newStatusConfig.requiresProject !== false) {
+        // Buscar a alocação atual para verificar se tem projeto
+        const currentAllocation = allocations.find(
+          (alloc) => (alloc._id || alloc.id) === allocationId
+        );
+        
+        // Verificar se a alocação tem projeto
+        const hasProject = currentAllocation?.projectId && (
+          typeof currentAllocation.projectId === 'string' 
+            ? currentAllocation.projectId 
+            : (currentAllocation.projectId as any)?._id || (currentAllocation.projectId as any)?.id
+        );
+        
+        if (!hasProject) {
+          alert(`O status "${newStatusConfig.label}" requer que um projeto seja selecionado. Por favor, abra a alocação para selecionar um projeto antes de alterar o status.`);
+          return; // Não fazer a alteração
+        }
+      }
+      
+      onUserAction?.(); // Notificar ação do usuário para pausar polling
+      // Usar optimistic update (sem refresh completo)
+      await updateAllocation(allocationId, { status: newStatus }, true);
+      // Não chamar refreshData() - a atualização já foi feita localmente
     } catch (error: any) {
       console.error('Erro ao atualizar status:', error);
+      
+      // Mostrar mensagem de erro do backend se disponível
+      const errorMessage = error?.response?.data?.message || error?.message || 'Erro ao alterar status. Por favor, tente novamente.';
+      alert(errorMessage);
+      
+      // O erro já foi tratado no store (reverteu e fez refresh se necessário)
       throw error;
     }
   };
 
-  // Handler para excluir alocação rapidamente
+  // Handler para excluir alocação rapidamente (com optimistic update)
   const handleQuickDelete = async (allocationId: string) => {
     try {
-      await deleteAllocation(allocationId);
-      await refreshData(); // Atualizar dados após exclusão
+      onUserAction?.(); // Notificar ação do usuário para pausar polling
+      // Usar optimistic update (sem refresh completo)
+      await deleteAllocation(allocationId, true);
+      // Não chamar refreshData() - a remoção já foi feita localmente
     } catch (error: any) {
       console.error('Erro ao excluir alocação:', error);
+      // O erro já foi tratado no store (reverteu e fez refresh se necessário)
       throw error;
     }
   };
@@ -249,7 +306,8 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
     date: Date, 
     timeSlot: TimeSlot
   ): Allocation[] => {
-    const dateKey = format(date, 'yyyy-MM-dd');
+    // Usar formatDateSafe em vez de format para evitar problemas de timezone
+    const dateKey = formatDateSafe(date);
     const allocations = groupedAllocations[consultantId]?.[dateKey] || [];
     return allocations.filter(a => a.timeSlot === timeSlot);
   };
@@ -479,7 +537,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
               
               return (
                 <th 
-                  key={format(day, 'yyyy-MM-dd')}
+                  key={formatDateSafe(day)}
                   className={`
                     px-1 py-2 border border-slate-300 text-center
                     ${isWeekendDay ? 'bg-[#4472C4]' : 'bg-[#003366]'}
@@ -583,7 +641,8 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
 
                     {/* Células dos dias */}
               {weekDays.map((day) => {
-                const dateKey = format(day, 'yyyy-MM-dd');
+                // Usar formatDateSafe para garantir consistência com getAllocationsForSlot
+                const dateKey = formatDateSafe(day);
                       const isWeekendDay = isWeekend(day);
                       const allocations = getAllocationsForSlot(consultantId, day, timeSlot);
                       const cellStyle = getCellStyle(allocations, period, isWeekendDay);
@@ -606,7 +665,7 @@ export default function AgendaGrid({ selectedProject, selectedManager, selectedT
                             maxWidth: '70px',
                             backgroundColor: cellStyle.backgroundColor,
                             color: cellStyle.color,
-                            transition: 'background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border 0.2s ease',
+                            transition: 'background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, border 0.3s ease, opacity 0.2s ease',
                             ...(cellStyle.boxShadow && { boxShadow: cellStyle.boxShadow }),
                             ...(cellStyle.border && { border: cellStyle.border }),
                           }}

@@ -212,6 +212,25 @@ export default function AllocationModal({
     }
   };
 
+  // Helper para formatar data sem problemas de timezone
+  // IMPORTANTE: Sempre usa os métodos getFullYear(), getMonth(), getDate() 
+  // que retornam valores no timezone LOCAL, evitando problemas de conversão
+  // Este método garante que a string resultante sempre será "yyyy-MM-dd" correto
+  const formatDateSafe = (date: Date): string => {
+    // IMPORTANTE: Não usar format() do date-fns aqui, pois pode ter problemas de timezone
+    // Usar diretamente os métodos nativos do Date que sempre retornam valores no timezone local
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1; // getMonth() retorna 0-11, então +1 para 1-12
+    const day = date.getDate(); // getDate() retorna o dia do mês no timezone local (1-31)
+    
+    // Formatar como "yyyy-MM-dd"
+    const yearStr = String(year);
+    const monthStr = String(month).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    
+    return `${yearStr}-${monthStr}-${dayStr}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -220,23 +239,36 @@ export default function AllocationModal({
       console.warn('Tentativa de salvar alocação por usuário não-admin bloqueada');
       return;
     }
+
+    // VALIDAÇÃO: Verificar se o status requer projeto e se projeto foi selecionado
+    if (currentStatusRequiresProject && !formData.projectId) {
+      alert('Este status requer que um projeto seja selecionado. Por favor, selecione um projeto antes de salvar.');
+      return;
+    }
     
     setIsSubmitting(true);
 
     try {
+      // Formatar data de forma segura (sem problemas de timezone)
+      // IMPORTANTE: A prop 'date' já deve estar normalizada pelo AgendaGrid
+      // Mas garantimos que formatamos corretamente para string "yyyy-MM-dd"
+      const formattedDate = formatDateSafe(date);
+      
       // Se está editando uma alocação existente, usa a lógica antiga (um único período/horário)
       if (effectiveAllocation) {
         const data = {
           consultantId: consultant.id || consultant._id,
           projectId: formData.projectId || undefined,
-          date: format(date, 'yyyy-MM-dd'),
+          date: formattedDate, // String "yyyy-MM-dd"
           period: formData.periods[0], // Pega o primeiro período
           timeSlot: formData.timeSlots[0], // Pega o primeiro horário
           status: effectiveStatus,
           artiaActivity: formData.artiaActivity || undefined,
           notes: formData.notes || undefined
         };
-        await updateAllocation(effectiveAllocation._id || effectiveAllocation.id, data);
+        // Usar optimistic = false para garantir refresh completo após salvar no modal
+        // Isso garante que todas as mudanças complexas sejam sincronizadas corretamente
+        await updateAllocation(effectiveAllocation._id || effectiveAllocation.id, data, false);
       } else {
         // Criando novas alocações: cria uma para cada combinação de período + horário
         const allocations = [];
@@ -251,7 +283,7 @@ export default function AllocationModal({
             allocations.push({
               consultantId: consultant.id || consultant._id,
               projectId: formData.projectId || undefined,
-              date: format(date, 'yyyy-MM-dd'),
+              date: formattedDate, // String "yyyy-MM-dd"
               period,
               timeSlot,
               status: effectiveStatus,
@@ -271,6 +303,7 @@ export default function AllocationModal({
       handleClose();
     } catch (error) {
       console.error('Error saving allocation:', error);
+      alert('Erro ao salvar alocação. Por favor, tente novamente.');
     } finally {
       setIsSubmitting(false);
     }

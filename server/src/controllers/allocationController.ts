@@ -7,6 +7,61 @@ import path from 'path';
 import fs from 'fs';
 import { getAllowedTeamsForUser } from '../services/teamVisibilityService.js';
 
+// Helper para criar Date a partir de string "yyyy-MM-dd" no timezone local
+// Evita problemas de conversão UTC quando new Date() interpreta string como UTC
+// PROBLEMA: Quando você faz new Date("2024-01-12"), JavaScript interpreta como UTC meia-noite
+// e converte para o timezone local, podendo resultar no dia anterior
+// SOLUÇÃO: Parse manual da string e criação de Date usando construtor local
+const parseLocalDate = (dateString: string | Date): Date => {
+  // Se já é um Date object, normalizar para meio-dia local
+  if (dateString instanceof Date) {
+    const d = dateString as Date;
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
+  }
+  
+  // Parse da string "yyyy-MM-dd" e criar Date no timezone local
+  // Formato esperado: "2024-01-12"
+  const str = dateString as string;
+  const parts = str.split('-');
+  if (parts.length !== 3) {
+    // Se não for formato esperado, tentar parse normal e normalizar
+    const d = new Date(str);
+    if (isNaN(d.getTime())) {
+      throw new Error(`Formato de data inválido: ${str}`);
+    }
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
+  }
+  
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // Month é 0-indexed em JavaScript (0 = Janeiro)
+  const day = parseInt(parts[2], 10);
+  
+  // Validar valores
+  if (isNaN(year) || isNaN(month) || isNaN(day)) {
+    throw new Error(`Data inválida: ${str}`);
+  }
+  
+  // Criar Date no timezone LOCAL usando construtor local (não UTC)
+  // O construtor new Date(year, month, day, hour, minute, second) sempre usa timezone local
+  // Definir para meio-dia (12:00) para evitar problemas de timezone em queries
+  const localDate = new Date(year, month, day, 12, 0, 0, 0);
+  
+  // Verificar se a data criada corresponde ao que foi parseado (evita datas inválidas como 31/02)
+  if (localDate.getFullYear() !== year || localDate.getMonth() !== month || localDate.getDate() !== day) {
+    throw new Error(`Data inválida: ${str} (ex: 31 de fevereiro)`);
+  }
+  
+  return localDate;
+};
+
+// Helper para formatar data como "yyyy-MM-dd" no timezone local
+const formatDateLocal = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Get allocations with filters
 export const getAllocations = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -25,10 +80,16 @@ export const getAllocations = async (req: Request, res: Response, next: NextFunc
     if (startDate || endDate) {
       query.date = {};
       if (startDate) {
-        query.date.$gte = new Date(startDate as string);
+        // Usar parseLocalDate para evitar problemas de timezone
+        const start = parseLocalDate(startDate as string);
+        start.setHours(0, 0, 0, 0);
+        query.date.$gte = start;
       }
       if (endDate) {
-        query.date.$lte = new Date(endDate as string);
+        // Usar parseLocalDate para evitar problemas de timezone
+        const end = parseLocalDate(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        query.date.$lte = end;
       }
     }
     
@@ -115,10 +176,16 @@ export const getAgendaAllocations = async (req: Request, res: Response, next: Ne
       console.log('[getAgendaAllocations] No team restrictions (null) - showing all consultants');
     }
 
+    // Parse das datas no timezone local para evitar problemas de conversão UTC
+    const start = parseLocalDate(startDate as string);
+    start.setHours(0, 0, 0, 0);
+    const end = parseLocalDate(endDate as string);
+    end.setHours(23, 59, 59, 999);
+    
     const query: any = {
       date: {
-        $gte: new Date(startDate as string),
-        $lte: new Date(endDate as string),
+        $gte: start,
+        $lte: end,
       },
     };
 
@@ -158,7 +225,8 @@ export const getAgendaAllocations = async (req: Request, res: Response, next: Ne
     
     allocations.forEach((allocation) => {
       const consultantId = allocation.consultantId._id.toString();
-      const dateKey = allocation.date.toISOString().split('T')[0];
+      // Usar formatação local em vez de toISOString para evitar problemas de timezone
+      const dateKey = formatDateLocal(allocation.date);
       
       if (!grouped[consultantId]) {
         grouped[consultantId] = {};
@@ -180,14 +248,29 @@ export const getAgendaAllocations = async (req: Request, res: Response, next: Ne
 };
 
 // Create allocation (admin only)
+
 export const createAllocation = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { consultantId, projectId, date, period, timeSlot, status, artiaActivity, notes } = req.body;
     
-    // Criar datas separadas para não modificar a original
-    const startOfDay = new Date(date);
+    // VALIDAÇÃO: Verificar se o status requer projeto
+    if (status && status !== 'conflito') {
+      const statusConfig = await StatusConfig.findOne({ key: status, active: true });
+      if (statusConfig && statusConfig.requiresProject !== false && !projectId) {
+        return res.status(400).json({ 
+          message: `O status "${statusConfig.label}" requer que um projeto seja selecionado.` 
+        });
+      }
+    }
+    
+    // Parse da data no timezone local (evita conversão UTC)
+    // IMPORTANTE: date deve vir como string "yyyy-MM-dd" do frontend
+    const allocationDate = parseLocalDate(date);
+    
+    // Criar datas separadas para query (início e fim do dia no timezone local)
+    const startOfDay = new Date(allocationDate);
     startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(date);
+    const endOfDay = new Date(allocationDate);
     endOfDay.setHours(23, 59, 59, 999);
 
     // Verificar se já existem alocações no mesmo slot ANTES de criar
@@ -206,7 +289,7 @@ export const createAllocation = async (req: Request, res: Response, next: NextFu
     const allocation = await Allocation.create({
       consultantId,
       projectId: projectId || null,
-      date: new Date(date),
+      date: allocationDate, // Usar a data parseada no timezone local
       period,
       timeSlot,
       status: finalStatus,
@@ -276,9 +359,12 @@ export const createBulkAllocations = async (req: Request, res: Response, next: N
 
     for (const alloc of allocations) {
       try {
+        // Parse da data no timezone local para evitar problemas de conversão UTC
+        const allocationDate = parseLocalDate(alloc.date);
+        
         const allocation = await Allocation.create({
           ...alloc,
-          date: new Date(alloc.date),
+          date: allocationDate, // Usar data parseada no timezone local
           createdBy: req.user!._id,
           history: [{
             action: 'created',
@@ -309,12 +395,28 @@ export const createBulkAllocations = async (req: Request, res: Response, next: N
 // Update allocation (admin only)
 export const updateAllocation = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { projectId, period, timeSlot, status, artiaActivity, notes } = req.body;
+    const { projectId, period, timeSlot, status, artiaActivity, notes, date } = req.body;
     const id = req.params.id;
 
     const allocation = await Allocation.findById(id);
     if (!allocation) {
       return res.status(404).json({ message: 'Alocação não encontrada' });
+    }
+
+    // VALIDAÇÃO: Se está alterando o status, verificar se o novo status requer projeto
+    if (status && allocation.status !== status) {
+      const newStatusConfig = await StatusConfig.findOne({ key: status, active: true });
+      if (newStatusConfig && newStatusConfig.requiresProject !== false) {
+        // Verificar se a alocação terá projeto após a atualização
+        // Se projectId foi fornecido no body, usar ele; senão, usar o atual da alocação
+        const finalProjectId = projectId !== undefined ? (projectId || null) : allocation.projectId;
+        
+        if (!finalProjectId) {
+          return res.status(400).json({ 
+            message: `O status "${newStatusConfig.label}" requer que um projeto seja selecionado.` 
+          });
+        }
+      }
     }
 
     // Registrar alterações no histórico
@@ -372,7 +474,7 @@ export const updateAllocation = async (req: Request, res: Response, next: NextFu
       allocation.status = status;
 
       // Verifica se o novo status requer projeto
-      const statusConfig = await StatusConfig.findOne({ key: status });
+      const statusConfig = await StatusConfig.findOne({ key: status, active: true });
       if (statusConfig && statusConfig.requiresProject === false) {
         // Se o status não requer projeto, limpa o projeto
         if (allocation.projectId) {
@@ -414,6 +516,27 @@ export const updateAllocation = async (req: Request, res: Response, next: NextFu
         description: 'Observações alteradas',
       });
       allocation.notes = notes;
+    }
+
+    // Se a data foi fornecida, atualizar (parse no timezone local)
+    if (date !== undefined) {
+      const newDate = parseLocalDate(date);
+      // Comparar apenas ano, mês e dia (ignorar hora)
+      const oldDateStr = formatDateLocal(allocation.date);
+      const newDateStr = formatDateLocal(newDate);
+      
+      if (oldDateStr !== newDateStr) {
+        changes.push({
+          action: 'updated',
+          field: 'date',
+          oldValue: oldDateStr,
+          newValue: newDateStr,
+          changedBy: req.user?._id,
+          changedAt: new Date(),
+          description: `Data alterada de ${oldDateStr} para ${newDateStr}`,
+        });
+        allocation.date = newDate;
+      }
     }
 
     // Adicionar alterações ao histórico

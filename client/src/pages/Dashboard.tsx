@@ -52,6 +52,7 @@ export default function Dashboard() {
           selectedTeams: Array.isArray(filters.selectedTeams) ? filters.selectedTeams : [],
           showFilters: filters.showFilters === true,
           currentWeekStart: filters.currentWeekStart ? new Date(filters.currentWeekStart) : null,
+          weeksToShow: typeof filters.weeksToShow === 'number' && filters.weeksToShow > 0 ? filters.weeksToShow : 1,
         };
       }
     } catch (err) {
@@ -64,6 +65,7 @@ export default function Dashboard() {
       selectedTeams: [],
       showFilters: false,
       currentWeekStart: null,
+      weeksToShow: 1,
     };
   };
 
@@ -74,7 +76,8 @@ export default function Dashboard() {
     manager: string,
     teams: string[],
     showFilters: boolean,
-    weekStart: Date | null
+    weekStart: Date | null,
+    weeks: number
   ) => {
     try {
       const filters = {
@@ -84,6 +87,7 @@ export default function Dashboard() {
         selectedTeams: teams,
         showFilters: showFilters,
         currentWeekStart: weekStart ? weekStart.toISOString() : null,
+        weeksToShow: weeks,
       };
       localStorage.setItem(FILTERS_STORAGE_KEY, JSON.stringify(filters));
     } catch (err) {
@@ -171,52 +175,90 @@ export default function Dashboard() {
     });
   }, [consultants, selectedTeams]);
 
-  // Carregar filtros salvos e aplicar na primeira renderização
+  // Flag para rastrear se já foi inicializado (evitar buscas duplicadas)
+  const [hasInitialized, setHasInitialized] = useState(false);
+  
+  // Carregar filtros salvos e aplicar na primeira renderização (ANTES de buscar dados)
   useEffect(() => {
+    if (hasInitialized) return; // Evitar execução múltipla
+    
     const saved = loadFiltersFromStorage();
+    
+    // Aplicar filtros ANTES de buscar dados
+    // IMPORTANTE: Aplicar weeksToShow PRIMEIRO, antes de qualquer outra operação
+    if (saved.weeksToShow && saved.weeksToShow > 0) {
+      setWeeksToShow(saved.weeksToShow);
+    }
     if (saved.selectedConsultants.length > 0) {
       setSelectedConsultants(saved.selectedConsultants);
     }
-    if (saved.currentWeekStart) {
-      setCurrentWeek(saved.currentWeekStart);
-    }
-  }, []);
+    
+    // Carregar dados iniciais (consultores, projetos, status)
+    fetchConsultants(false);
+    fetchProjects();
+    fetchStatusConfigs();
+    
+    // Aplicar currentWeekStart após um pequeno delay para garantir que weeksToShow foi aplicado
+    // e evitar que setCurrentWeek use o valor antigo de weeksToShow
+    setTimeout(() => {
+      const finalWeeksToShow = saved.weeksToShow || weeksToShow;
+      if (saved.currentWeekStart && saved.currentWeekStart instanceof Date && !isNaN(saved.currentWeekStart.getTime())) {
+        setCurrentWeek(saved.currentWeekStart);
+      } else {
+        // Se não tem semana salva, buscar dados para a semana atual
+        const startDate = startOfWeek(currentWeekStart, { weekStartsOn: 1 });
+        const endDate = endOfWeek(addWeeks(currentWeekStart, finalWeeksToShow - 1), { weekStartsOn: 1 });
+        fetchAllocations(startDate, endDate);
+      }
+      setHasInitialized(true);
+    }, 50); // Pequeno delay para garantir que weeksToShow foi aplicado no store
+  }, [hasInitialized]); // Executar apenas uma vez (com hasInitialized como dependência)
 
-  // Salvar filtros sempre que mudarem
+  // Salvar filtros sempre que mudarem (após inicialização)
   useEffect(() => {
+    if (!hasInitialized) return; // Não salvar antes de inicializar
+    
     saveFiltersToStorage(
       selectedConsultants,
       selectedProject,
       selectedManager,
       selectedTeams,
       showFilters,
-      currentWeekStart
+      currentWeekStart,
+      weeksToShow
     );
-  }, [selectedConsultants, selectedProject, selectedManager, selectedTeams, showFilters, currentWeekStart]);
+  }, [selectedConsultants, selectedProject, selectedManager, selectedTeams, showFilters, currentWeekStart, weeksToShow, hasInitialized]);
 
+  // Buscar alocações quando currentWeekStart ou weeksToShow mudarem (após inicialização)
   useEffect(() => {
-    fetchConsultants(false); // Apenas ativos para a agenda
-    fetchProjects();
-    fetchStatusConfigs();
+    if (!hasInitialized) return; // Não buscar antes de inicializar
+    
     const startDate = startOfWeek(currentWeekStart, { weekStartsOn: 1 });
     const endDate = endOfWeek(addWeeks(currentWeekStart, weeksToShow - 1), { weekStartsOn: 1 });
     fetchAllocations(startDate, endDate);
-  }, [currentWeekStart, weeksToShow]);
+  }, [currentWeekStart, weeksToShow, hasInitialized]);
+
+  // Estado para rastrear última ação do usuário e pausar polling
+  const [lastUserActionTime, setLastUserActionTime] = useState<number>(0);
+  const USER_ACTION_COOLDOWN = 5000; // 5 segundos de cooldown após ação do usuário
 
   // Polling automático para atualizar alocações em tempo real
   useEffect(() => {
-    // Não fazer polling se algum modal estiver aberto
-    if (isAllocationModalOpen || showBulkModal) {
-      return;
-    }
-
-    // Não fazer polling se a aba estiver oculta
-    if (document.hidden) {
-      return;
-    }
+    if (!pollingInterval || pollingInterval < 5000) return;
 
     const intervalId = setInterval(() => {
-      // Verificar se a aba ainda está visível antes de atualizar
+      const timeSinceLastAction = Date.now() - lastUserActionTime;
+      
+      // Pausar polling se modal estiver aberto, tab oculta, ou ação recente do usuário
+      if (
+        isAllocationModalOpen || 
+        showBulkModal || 
+        document.hidden ||
+        timeSinceLastAction < USER_ACTION_COOLDOWN
+      ) {
+        return;
+      }
+
       if (!document.hidden) {
         // Atualizar apenas alocações (silenciosamente)
         // As datas são recalculadas para garantir que estão corretas
@@ -232,7 +274,7 @@ export default function Dashboard() {
     // Cleanup do intervalo
     return () => clearInterval(intervalId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWeekStart, weeksToShow, pollingInterval, isAllocationModalOpen, showBulkModal]);
+  }, [currentWeekStart, weeksToShow, pollingInterval, isAllocationModalOpen, showBulkModal, lastUserActionTime]);
 
   const goToToday = () => {
     setCurrentWeek(new Date());
@@ -553,6 +595,7 @@ export default function Dashboard() {
             selectedManager={selectedManager} 
             selectedTeams={selectedTeams}
             onModalOpenChange={setIsAllocationModalOpen}
+            onUserAction={() => setLastUserActionTime(Date.now())}
           />
         </div>
 
