@@ -47,13 +47,11 @@ if (process.env.NODE_ENV === 'production') {
   if (fs.existsSync(clientDistPath)) {
     console.log('📁 Frontend build encontrado em:', clientDistPath);
     
-    // Servir arquivos estáticos com base /agenda
-    app.use('/agenda', express.static(clientDistPath, {
-      index: false, // Não servir index.html automaticamente
-    }));
+    // Servir arquivos estáticos na raiz (subdomínio agenda.fpsoftware.cloud)
+    app.use(express.static(clientDistPath));
     
-    // Rota /agenda serve o index.html
-    app.get('/agenda', (req, res) => {
+    // Rota raiz serve o index.html
+    app.get('/', (req, res) => {
       const indexPath = path.join(clientDistPath, 'index.html');
       if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
@@ -62,9 +60,8 @@ if (process.env.NODE_ENV === 'production') {
       }
     });
     
-    // Rotas SPA dentro de /agenda (para React Router)
-    // IMPORTANTE: Esta rota deve vir DEPOIS das rotas de API
-    app.get('/agenda/*', (req, res) => {
+    // Rotas SPA (para React Router) - IMPORTANTE: deve vir DEPOIS das rotas de API
+    app.get('*', (req, res) => {
       // Não servir index.html para rotas de API
       if (req.path.startsWith('/api')) {
         return res.status(404).json({ message: 'Rota não encontrada' });
@@ -77,7 +74,7 @@ if (process.env.NODE_ENV === 'production') {
       }
     });
     
-    console.log('✅ Frontend configurado para servir em /agenda');
+    console.log('✅ Frontend configurado para servir na raiz (subdomínio)');
   } else {
     console.warn('⚠️ Frontend build not found, serving API only');
     console.warn('   Procurando em:', clientDistPath);

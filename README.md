@@ -136,6 +136,27 @@ O sistema estará disponível em:
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:3001
 
+## 🚀 Deploy em Produção
+
+Para fazer deploy em produção usando Docker e Nginx, consulte o guia completo:
+
+📖 **[DEPLOY-AGENDA.md](./DEPLOY-AGENDA.md)**
+
+A aplicação está configurada para rodar em:
+- **Produção:** `https://agenda.fpsoftware.cloud` (subdomínio)
+- **Desenvolvimento:** `http://localhost:5173`
+
+### Deploy Rápido
+
+```bash
+# Na VPS
+cd ~/consultant-scheduler
+git pull
+./deploy.sh
+```
+
+O script `deploy.sh` automatiza todo o processo de deploy.
+
 ## 🔑 Credenciais
 
 Após executar o seed:

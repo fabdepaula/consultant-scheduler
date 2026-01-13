@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { UserFunction, UserProfile } from '../types';
 
-// Em produção, usa /agenda/api. Em desenvolvimento, usa /api
+// Usa /api em todos os ambientes (subdomínio agenda.fpsoftware.cloud)
 const api = axios.create({
-  baseURL: import.meta.env.PROD ? '/agenda/api' : '/api',
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
