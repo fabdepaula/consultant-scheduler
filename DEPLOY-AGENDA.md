@@ -40,78 +40,14 @@ docker compose up -d
 docker compose logs -f app
 ```
 
-### 3. Configurar Nginx
+### 3. Proxy reverso (Traefik)
 
-A configuração do Nginx deve estar no arquivo de configuração do subdomínio:
+O proxy reverso na VPS é configurado pela equipe de infraestrutura usando **Traefik**. A aplicação expõe a porta 3001 e está preparada para receber os headers `X-Forwarded-*` (o Express usa `trust proxy` em produção).
 
-```bash
-# Editar configuração do Nginx
-sudo nano /etc/nginx/sites-available/agenda.fpsoftware.cloud
-```
-
-Configuração recomendada:
-
-```nginx
-server {
-    listen 80;
-    server_name agenda.fpsoftware.cloud;
-
-    location / {
-        proxy_pass http://127.0.0.1:3001;
-        proxy_http_version 1.1;
-        
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Port $server_port;
-        
-        # WebSocket support
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        
-        # Timeouts
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
-        
-        # Buffer settings
-        proxy_buffering off;
-        proxy_request_buffering off;
-    }
-}
-```
-
-### 4. Ativar e reiniciar Nginx
-
-```bash
-# Criar link simbólico (se não existir)
-sudo ln -s /etc/nginx/sites-available/agenda.fpsoftware.cloud /etc/nginx/sites-enabled/
-
-# Testar configuração
-sudo nginx -t
-
-# Reiniciar Nginx
-sudo systemctl restart nginx
-```
-
-### 5. Configurar HTTPS (Opcional mas Recomendado)
-
-```bash
-# Instalar Certbot
-sudo apt install certbot python3-certbot-nginx -y
-
-# Obter certificado SSL
-sudo certbot --nginx -d agenda.fpsoftware.cloud
-
-# O Certbot vai atualizar automaticamente o Nginx
-```
-
-Depois disso, a aplicação estará disponível em:
+A aplicação estará disponível em:
 - `https://agenda.fpsoftware.cloud`
 
-### 6. Verificar se está funcionando
+### 4. Verificar se está funcionando
 
 1. Acesse: `https://agenda.fpsoftware.cloud`
 2. Abra DevTools (F12) → Network
@@ -133,10 +69,7 @@ Depois disso, a aplicação estará disponível em:
    docker compose logs app | grep -i "frontend\|subdomínio"
    ```
 
-3. Verificar configuração do Nginx:
-   ```bash
-   sudo nginx -t
-   ```
+3. Verificar se o proxy reverso (Traefik) está roteando corretamente para o container (contate a equipe de infraestrutura se necessário).
 
 ### API não funciona (401 Unauthorized)
 

@@ -1,5 +1,7 @@
 # Docker Compose para Nginx (se quiser rodar Nginx via Docker Compose)
 # Use este arquivo se quiser gerenciar o Nginx via Docker Compose
+#
+# ⚠️ LEGADO: O proxy reverso em produção usa Traefik. Este arquivo é mantido apenas como referência.
 
 version: '3.8'
 

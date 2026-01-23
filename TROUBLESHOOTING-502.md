@@ -1,8 +1,10 @@
 # Troubleshooting: Erro 502 Bad Gateway
 
+> **Nota:** Este guia foi escrito para ambientes com **Nginx**. Em produção o proxy reverso é o **Traefik**; para diagnóstico de 502 com Traefik, consulte a equipe de infraestrutura. Os passos abaixo (container, backend, logs) ainda se aplicam.
+
 ## Diagnóstico do erro 502
 
-O erro 502 significa que o Nginx não consegue conectar ao backend. Siga estes passos:
+O erro 502 significa que o proxy reverso não consegue conectar ao backend. Siga estes passos:
 
 ### 1. Verificar se o container está rodando
 

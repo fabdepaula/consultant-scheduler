@@ -147,62 +147,9 @@ docker-compose build --no-cache
 docker-compose up -d
 ```
 
-## Configurar Nginx como Proxy Reverso (Recomendado)
+## Proxy reverso (Traefik)
 
-Para usar um domínio e HTTPS, configure o Nginx:
-
-### 1. Instalar Nginx
-
-```bash
-sudo apt install nginx -y
-```
-
-### 2. Criar configuração do site
-
-```bash
-sudo nano /etc/nginx/sites-available/consultant-scheduler
-```
-
-Cole o seguinte conteúdo (ajuste o `server_name`):
-
-```nginx
-server {
-    listen 80;
-    server_name seu-dominio.com www.seu-dominio.com;
-
-    location / {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-### 3. Ativar o site
-
-```bash
-sudo ln -s /etc/nginx/sites-available/consultant-scheduler /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-### 4. Configurar SSL com Let's Encrypt (HTTPS)
-
-```bash
-sudo apt install certbot python3-certbot-nginx -y
-sudo certbot --nginx -d seu-dominio.com -d www.seu-dominio.com
-```
-
-O Certbot irá:
-- Instalar o certificado SSL
-- Configurar renovação automática
-- Redirecionar HTTP para HTTPS
+O proxy reverso na VPS é configurado pela equipe de infraestrutura usando **Traefik**. A aplicação expõe a porta 3001 e está preparada para receber os headers `X-Forwarded-*` (o Express usa `trust proxy` em produção). Domínio, HTTPS e certificados SSL são gerenciados pela infraestrutura.
 
 ## Troubleshooting
 
@@ -239,7 +186,7 @@ Verifique se:
 Verifique se:
 - O build do frontend foi gerado (`client/dist` existe)
 - O `CLIENT_URL` no `.env` está correto
-- O Nginx está configurado corretamente (se estiver usando)
+- O proxy reverso (Traefik) está roteando corretamente para a aplicação
 
 ## Estrutura de Arquivos
 

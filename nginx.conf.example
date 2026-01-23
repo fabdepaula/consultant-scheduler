@@ -1,6 +1,8 @@
 # Configuração do Nginx para fpsoftware.cloud/agenda
 # Copie este arquivo para /etc/nginx/sites-available/fpsoftware.cloud
 # e ative com: sudo ln -s /etc/nginx/sites-available/fpsoftware.cloud /etc/nginx/sites-enabled/
+#
+# LEGADO: O proxy reverso em produção usa Traefik. Este arquivo é mantido como referência.
 
 server {
     listen 80;

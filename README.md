@@ -138,7 +138,7 @@ O sistema estará disponível em:
 
 ## 🚀 Deploy em Produção
 
-Para fazer deploy em produção usando Docker e Nginx, consulte o guia completo:
+Para fazer deploy em produção usando Docker e Traefik (proxy reverso), consulte o guia completo:
 
 📖 **[DEPLOY-AGENDA.md](./DEPLOY-AGENDA.md)**
 

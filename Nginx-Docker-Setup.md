@@ -1,5 +1,7 @@
 # Configuração do Nginx em Container Separado
 
+> **⚠️ Legado:** Este documento refere-se ao Nginx. O proxy reverso em produção passou a usar **Traefik**. Mantido apenas como referência.
+
 Quando o Nginx está rodando em um container separado, ele não consegue acessar `localhost:3001` porque cada container tem seu próprio `localhost`.
 
 ## Soluções

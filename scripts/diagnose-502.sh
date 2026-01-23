@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# ⚠️ LEGADO: Este script foi feito para ambientes com Nginx.
+# Em produção o proxy reverso é o Traefik; para diagnóstico com Traefik, consulte a equipe de infraestrutura.
+
 echo "🔍 Diagnóstico do erro 502 Bad Gateway"
 echo "========================================"
 echo ""
