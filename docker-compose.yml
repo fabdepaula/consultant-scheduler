@@ -17,6 +17,7 @@ services:
       - MYSQL_USER=${MYSQL_USER:-}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-}
       - MYSQL_DATABASE=${MYSQL_DATABASE:-}
+      - POWERBI_CONFERENCIA_EMBED_URL=${POWERBI_CONFERENCIA_EMBED_URL:-}
     volumes:
       - ./uploads:/app/server/uploads
     networks:

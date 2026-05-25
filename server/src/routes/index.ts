@@ -12,6 +12,7 @@ import roleRoutes from './roleRoutes.js';
 import permissionRoutes from './permissionRoutes.js';
 import systemRoutes from './systemRoutes.js';
 import sessionLogRoutes from './sessionLogRoutes.js';
+import reportsRoutes from './reportsRoutes.js';
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.use('/roles', roleRoutes);
 router.use('/permissions', permissionRoutes);
 router.use('/system', systemRoutes);
 router.use('/session-logs', sessionLogRoutes);
+router.use('/reports', reportsRoutes);
 
 // Health check
 router.get('/health', (req, res) => {

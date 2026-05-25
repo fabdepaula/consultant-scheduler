@@ -115,10 +115,18 @@ npm install
 ```
 
 ### 3. Inicie o MongoDB
-Se estiver usando MongoDB local:
+**Opção A — Docker (recomendado no Mac):**
 ```bash
-mongod
+docker compose -f docker-compose.dev.yml up -d
 ```
+Use no `server/.env`: `MONGODB_URI=mongodb://localhost:27017/consultant-scheduler`
+
+**Opção B — MongoDB instalado na máquina** (em outro terminal, deixe rodando):
+```bash
+npm run mongo:dev
+```
+
+**Opção C — MongoDB Atlas:** use a URI do Atlas em `MONGODB_URI` no `server/.env` (não precisa subir Mongo local).
 
 ### 4. Execute o seed (dados iniciais)
 ```bash

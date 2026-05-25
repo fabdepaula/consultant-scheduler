@@ -281,6 +281,12 @@ export const systemAPI = {
   getConfig: () => api.get('/system/config'),
 };
 
+// Reports API
+export const reportsAPI = {
+  getConferenciaApontamentoEmbed: () =>
+    api.get<{ embedUrl: string; title: string }>('/reports/conferencia-apontamento/embed'),
+};
+
 // Session Logs API
 export const sessionLogsAPI = {
   getAll: (params?: { page?: number; limit?: number; userId?: string; search?: string }) =>

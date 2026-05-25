@@ -1,0 +1,15 @@
+# MongoDB local para desenvolvimento (npm run dev)
+# Uso: docker compose -f docker-compose.dev.yml up -d
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: consultant-scheduler-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - consultant-scheduler-mongo-data:/data/db
+
+volumes:
+  consultant-scheduler-mongo-data:

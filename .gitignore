@@ -19,6 +19,9 @@ out/
 .env.test.local
 .env.production.local
 
+# MongoDB local dev data
+.mongo-data/
+
 # Logs
 logs
 *.log

@@ -84,6 +84,9 @@ const permissions = [
   { key: 'middleware.create', name: 'Nova Interface', resource: 'middleware', action: 'create', category: 'Middleware', description: 'Permite criar novas interfaces/middleware' },
   { key: 'middleware.update', name: 'Editar Interface', resource: 'middleware', action: 'update', category: 'Middleware', description: 'Permite editar interfaces/middleware existentes' },
   { key: 'middleware.execute', name: 'Executar Interface', resource: 'middleware', action: 'execute', category: 'Middleware', description: 'Permite executar interfaces/middleware' },
+
+  // Relatórios
+  { key: 'reports.conferencia-apontamento.view', name: 'Conferência de Apontamento', resource: 'reports', action: 'view', category: 'Relatórios', description: 'Permite visualizar o relatório Power BI de conferência de apontamentos' },
 ];
 
 // Usuários - todos com senha padrão Ngr@123

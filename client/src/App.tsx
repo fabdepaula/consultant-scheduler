@@ -14,6 +14,7 @@ import ExternalData from './pages/ExternalData';
 import Middleware from './pages/Middleware';
 import Roles from './pages/Roles';
 import SessionLogs from './pages/SessionLogs';
+import ConferenciaApontamento from './pages/ConferenciaApontamento';
 import Layout from './components/Layout/Layout';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -211,6 +212,11 @@ function App() {
             <PrivateRoute>
               <SessionLogs />
             </PrivateRoute>
+          } />
+          <Route path="conferencia-apontamento" element={
+            <PermissionRoute permission="reports.conferencia-apontamento.view">
+              <ConferenciaApontamento />
+            </PermissionRoute>
           } />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

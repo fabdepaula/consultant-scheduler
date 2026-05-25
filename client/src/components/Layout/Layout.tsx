@@ -14,7 +14,8 @@ import {
   ChevronRight,
   Database,
   Activity,
-  Shield
+  Shield,
+  ClipboardCheck
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
@@ -53,6 +54,7 @@ export default function Layout() {
   const canManageRoles = isAdmin || hasPermission('roles.manage');
   const canViewExternalData = isAdmin || hasPermission('external-data.view');
   const canManageMiddleware = isAdmin || hasPermission('middleware.view') || hasPermission('middleware.create') || hasPermission('middleware.update') || hasPermission('middleware.execute');
+  const canViewConferenciaApontamento = isAdmin || hasPermission('reports.conferencia-apontamento.view');
 
   const navItems = [
     { to: '/', icon: Calendar, label: 'Agenda' },
@@ -64,6 +66,7 @@ export default function Layout() {
     ...(canManageRoles ? [{ to: '/perfis', icon: Shield, label: 'Perfis' }] : []),
     ...(canViewExternalData ? [{ to: '/dados-externos', icon: Database, label: 'Dados Externos' }] : []),
     ...(canManageMiddleware ? [{ to: '/middleware', icon: Activity, label: 'Middleware' }] : []),
+    ...(canViewConferenciaApontamento ? [{ to: '/conferencia-apontamento', icon: ClipboardCheck, label: 'Apontamentos' }] : []),
     ...(isAdmin ? [{ to: '/logs-acesso', icon: Activity, label: 'Logs de Acesso' }] : []),
   ];
 

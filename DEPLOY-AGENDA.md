@@ -130,7 +130,10 @@ MYSQL_HOST=
 MYSQL_USER=
 MYSQL_PASSWORD=
 MYSQL_DATABASE=
+POWERBI_CONFERENCIA_EMBED_URL=https://app.powerbi.com/view?r=...
 ```
+
+A variável `POWERBI_CONFERENCIA_EMBED_URL` é usada apenas no servidor para o relatório **Conferência de Apontamento**. Atribua a permissão `reports.conferencia-apontamento.view` aos perfis desejados em **Perfis**.
 
 ## Script de Deploy Automatizado
 
