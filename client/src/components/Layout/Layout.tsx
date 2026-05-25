@@ -44,8 +44,9 @@ export default function Layout() {
     navigate('/login');
   };
 
-  // Verificar permissões usando RBAC (com fallback para admin antigo)
-  const isAdmin = user?.profile === 'admin';
+  // Admin: profile legado ou perfil de sistema com key "admin"
+  const roleKey = typeof user?.role === 'object' ? user.role?.key : undefined;
+  const isAdmin = user?.profile === 'admin' || roleKey === 'admin';
   const canManageUsers = isAdmin || hasPermission('users.manage') || hasPermission('users.view');
   const canManageProjects = isAdmin || hasPermission('projects.manage') || hasPermission('projects.view') || hasPermission('projects.create');
   const canManageFunctions = isAdmin || hasPermission('functions.manage');

@@ -1,4 +1,6 @@
 import User from '../models/User.js';
+import Role from '../models/Role.js';
+import Permission from '../models/Permission.js';
 import { IUser, IRole, IPermission } from '../types/index.js';
 
 /**
@@ -21,23 +23,36 @@ export const getUserPermissions = async (userId: string): Promise<string[]> => {
       return [];
     }
 
-    // Verificar se permissions está populado (é IPermission[]) ou não (é ObjectId[])
-    // Se o primeiro elemento tem a propriedade 'key', está populado
-    const isPopulated = role.permissions.length > 0 && 
-      typeof role.permissions[0] === 'object' && 
-      'key' in (role.permissions[0] as any);
+    // Perfil Admin do sistema: todas as permissões ativas no banco
+    if (role.key === 'admin') {
+      const all = await Permission.find({ active: true }).select('key');
+      return all.map((p) => p.key);
+    }
 
-    if (!isPopulated) {
-      // Se não está populado, retornar array vazio (não temos as informações necessárias)
+    // Verificar se permissions está populado (tem .key) ou são só ObjectIds
+    const isPopulated =
+      role.permissions.length > 0 &&
+      typeof role.permissions[0] === 'object' &&
+      role.permissions[0] !== null &&
+      'key' in (role.permissions[0] as object);
+
+    if (isPopulated) {
+      return (role.permissions as unknown as IPermission[])
+        .filter((perm: IPermission) => perm?.active !== false)
+        .map((perm: IPermission) => perm.key);
+    }
+
+    // ObjectIds sem populate — buscar documentos de permissão
+    const permissionIds = role.permissions
+      .map((p) => (typeof p === 'object' && p && '_id' in p ? (p as { _id: unknown })._id : p))
+      .filter(Boolean);
+
+    if (permissionIds.length === 0) {
       return [];
     }
 
-    // Extrair as chaves das permissões ativas (agora sabemos que são IPermission[])
-    const permissions = (role.permissions as unknown as IPermission[])
-      .filter((perm: IPermission) => perm.active)
-      .map((perm: IPermission) => perm.key);
-
-    return permissions;
+    const docs = await Permission.find({ _id: { $in: permissionIds }, active: true }).select('key');
+    return docs.map((p) => p.key);
   }
 
   return [];
@@ -58,6 +73,15 @@ export const hasPermission = async (userId: string, permissionKey: string): Prom
   if (!user.role && user.profile === 'admin') {
     console.log(`[hasPermission] User ${userId} is old admin - granting all permissions`);
     return true;
+  }
+
+  // Usuário com perfil Admin (role.key) tem acesso total
+  if (user.role) {
+    const roleId = typeof user.role === 'object' && '_id' in user.role ? user.role._id : user.role;
+    const roleDoc = await Role.findById(roleId).select('key');
+    if (roleDoc?.key === 'admin') {
+      return true;
+    }
   }
 
   if (!user.role) {

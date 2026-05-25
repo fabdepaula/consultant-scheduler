@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "seed": "tsx src/scripts/seed.ts",
+    "upsert:conferencia-permission": "tsx src/scripts/upsert-conferencia-permission.ts",
     "test-mysql": "tsx src/scripts/test-mysql.ts"
   },
   "dependencies": {

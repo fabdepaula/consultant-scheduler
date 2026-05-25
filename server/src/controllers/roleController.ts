@@ -96,16 +96,9 @@ export const updateRole = async (req: Request, res: Response, next: NextFunction
       receivedData: { name, description, permissions: permissions?.length, allowedTeams: allowedTeams?.length, active }
     });
 
-    // Não permitir editar perfis do sistema (exceto campos específicos)
-    if (role.isSystem) {
-      // Permitir apenas atualizar active, description e allowedTeams
-      if (name !== undefined && name !== role.name) {
-        return res.status(400).json({ message: 'Não é possível alterar o nome de um perfil do sistema' });
-      }
-      // Se permissions foi enviado e não é undefined, bloquear
-      if (permissions !== undefined && permissions !== null) {
-        return res.status(400).json({ message: 'Não é possível alterar as permissões de um perfil do sistema' });
-      }
+    // Perfis do sistema: não alterar nome/chave; permissões podem ser atualizadas
+    if (role.isSystem && name !== undefined && name !== role.name) {
+      return res.status(400).json({ message: 'Não é possível alterar o nome de um perfil do sistema' });
     }
 
     // Validar permissões se fornecidas

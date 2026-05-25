@@ -89,8 +89,10 @@ function PermissionRoute({
     return <Navigate to="/login" replace />;
   }
 
-  // Fallback: admin antigo tem acesso a tudo
-  if (user?.profile === 'admin' && !user?.role) {
+  // Admin legado (profile) ou perfil de sistema Admin (role.key)
+  const roleKey = typeof user?.role === 'object' ? user.role?.key : undefined;
+  const isFullAdmin = user?.profile === 'admin' || roleKey === 'admin';
+  if (isFullAdmin) {
     return <>{children}</>;
   }
 

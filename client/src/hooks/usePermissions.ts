@@ -3,6 +3,37 @@ import { useAuthStore } from '../store/authStore';
 import { rolesAPI } from '../services/api';
 import { Permission, Role } from '../types';
 
+const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
+
+function extractPermissionKeys(role: Role | null): string[] {
+  if (!role?.permissions || !Array.isArray(role.permissions)) {
+    return [];
+  }
+
+  return role.permissions
+    .map((perm: Permission | string) => {
+      if (typeof perm === 'object' && perm !== null && 'key' in perm) {
+        return perm.active !== false ? perm.key : null;
+      }
+      if (typeof perm === 'string') {
+        // Ignorar ObjectIds crus — não são chaves de permissão
+        if (OBJECT_ID_RE.test(perm)) {
+          return null;
+        }
+        return perm;
+      }
+      return null;
+    })
+    .filter((key): key is string => Boolean(key));
+}
+
+function userHasAdminAccess(user: { profile?: string; role?: Role | string | null } | null): boolean {
+  if (!user) return false;
+  if (user.profile === 'admin') return true;
+  const role = typeof user.role === 'object' ? user.role : null;
+  return role?.key === 'admin';
+}
+
 export const usePermissions = () => {
   const { user } = useAuthStore();
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -10,118 +41,83 @@ export const usePermissions = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      setPermissions([]);
-      setRole(null);
-      setLoading(false);
-      return;
-    }
+    let cancelled = false;
 
-    // Se o usuário tem role populado, extrair permissões
-    if (user.role) {
-      const userRole = typeof user.role === 'object' ? user.role : null;
-      
-      if (userRole && Array.isArray(userRole.permissions)) {
-        // Verificar se permissions são objetos ou strings
-        const permissionKeys = userRole.permissions
-          .map((perm: Permission | string) => {
-            if (typeof perm === 'object' && perm.key) {
-              return perm.active ? perm.key : null;
-            }
-            return perm; // Já é uma string (ID ou key)
-          })
-          .filter(Boolean) as string[];
-        
-        setPermissions(permissionKeys);
-        setRole(userRole);
+    const load = async () => {
+      if (!user) {
+        setPermissions([]);
+        setRole(null);
         setLoading(false);
-      } else {
-        // Se role é apenas um ID, buscar do backend (usar função async dentro do useEffect)
-        if (typeof user.role === 'string' || (userRole && !Array.isArray(userRole.permissions))) {
-          const roleId = typeof user.role === 'string' ? user.role : (userRole?._id || userRole?.id);
-          if (roleId) {
-            // Função async dentro do useEffect
-            const fetchRole = async () => {
-              try {
-                const roleResponse = await rolesAPI.getById(roleId);
-                const fetchedRole = roleResponse.data.role;
-                
-                if (fetchedRole && Array.isArray(fetchedRole.permissions)) {
-                  const permissionKeys = fetchedRole.permissions
-                    .map((perm: Permission | string) => {
-                      if (typeof perm === 'object' && perm.key) {
-                        return perm.active ? perm.key : null;
-                      }
-                      return perm;
-                    })
-                    .filter(Boolean) as string[];
-                  
-                  setPermissions(permissionKeys);
-                  setRole(fetchedRole);
-                  setLoading(false);
-                  return;
-                }
-              } catch (err) {
-                console.error('[usePermissions] Erro ao buscar role:', err);
-                // Em caso de erro, usar fallback
-                if (user.profile === 'admin') {
-                  setPermissions([]);
-                } else {
-                  setPermissions(['allocations.view']);
-                }
-                setLoading(false);
-              }
-            };
-            
-            fetchRole();
-            return; // Retornar antes de executar o fallback
-          }
-        }
-        
-        // Fallback: usar profile como fallback
-        if (user.profile === 'admin') {
-          // Admin tem todas as permissões (será carregado do backend quando necessário)
-          setPermissions([]); // Será populado quando necessário
-        } else {
-          setPermissions(['allocations.view']); // Usuário padrão
-        }
-        setLoading(false);
+        return;
       }
-    } else if (user.profile === 'admin') {
-      // Fallback para compatibilidade: admin tem todas as permissões
-      setPermissions([]); // Será verificado no backend
+
+      if (userHasAdminAccess(user)) {
+        setPermissions([]);
+        setRole(typeof user.role === 'object' ? user.role : null);
+        setLoading(false);
+        return;
+      }
+
+      const roleId =
+        typeof user.role === 'string'
+          ? user.role
+          : user.role?._id || user.role?.id;
+
+      if (roleId) {
+        try {
+          const roleResponse = await rolesAPI.getById(roleId);
+          if (cancelled) return;
+          const fetchedRole = roleResponse.data.role as Role;
+          setRole(fetchedRole);
+          setPermissions(extractPermissionKeys(fetchedRole));
+          setLoading(false);
+          return;
+        } catch (err) {
+          console.error('[usePermissions] Erro ao buscar role:', err);
+        }
+      }
+
+      // Fallback: role já veio populado no login
+      const inlineRole = typeof user.role === 'object' ? user.role : null;
+      if (inlineRole) {
+        const keys = extractPermissionKeys(inlineRole);
+        setRole(inlineRole);
+        setPermissions(keys);
+      } else if (user.profile === 'admin') {
+        setPermissions([]);
+      } else {
+        setPermissions(['allocations.view']);
+      }
       setLoading(false);
-    } else {
-      setPermissions(['allocations.view']); // Usuário padrão
-      setLoading(false);
-    }
+    };
+
+    setLoading(true);
+    load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const hasPermission = (permissionKey: string): boolean => {
-    // Se for admin via profile antigo, sempre retorna true (compatibilidade)
-    if (user?.profile === 'admin') {
+    if (userHasAdminAccess(user)) {
       return true;
     }
-    
     return permissions.includes(permissionKey);
   };
 
   const hasAnyPermission = (...keys: string[]): boolean => {
-    // Se for admin via profile antigo, sempre retorna true
-    if (user?.profile === 'admin') {
+    if (userHasAdminAccess(user)) {
       return true;
     }
-    
-    return keys.some(key => permissions.includes(key));
+    return keys.some((key) => permissions.includes(key));
   };
 
   const hasAllPermissions = (...keys: string[]): boolean => {
-    // Se for admin via profile antigo, sempre retorna true
-    if (user?.profile === 'admin') {
+    if (userHasAdminAccess(user)) {
       return true;
     }
-    
-    return keys.every(key => permissions.includes(key));
+    return keys.every((key) => permissions.includes(key));
   };
 
   return {
@@ -133,4 +129,3 @@ export const usePermissions = () => {
     loading,
   };
 };
-

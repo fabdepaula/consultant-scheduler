@@ -121,10 +121,7 @@ export default function Roles() {
         active: formData.active,
       };
 
-      // Se não for perfil do sistema, incluir permissões
-      if (!editingRole || !editingRole.isSystem) {
-        data.permissions = formData.permissions;
-      }
+      data.permissions = formData.permissions;
 
       // Tratar allowedTeams
       if (formData.allowedTeams && formData.allowedTeams.length > 0) {
@@ -390,6 +387,15 @@ export default function Roles() {
                   placeholder="Descreva o propósito deste perfil..."
                 />
               </div>
+
+              {editingRole?.isSystem && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm flex items-start gap-2">
+                  <Lock className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>
+                    Perfil do sistema: o nome não pode ser alterado, mas as permissões podem ser salvas pela tela.
+                  </span>
+                </div>
+              )}
 
               {/* Permissões */}
               <div>
