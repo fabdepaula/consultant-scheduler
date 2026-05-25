@@ -30,7 +30,7 @@ export default function Layout() {
     return saved ? saved === 'true' : false;
   });
   const { user, logout } = useAuthStore();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isFullAdmin } = usePermissions();
   const navigate = useNavigate();
   const { InactivityWarningComponent } = useInactivityTimeout();
 
@@ -44,9 +44,7 @@ export default function Layout() {
     navigate('/login');
   };
 
-  // Admin: profile legado ou perfil de sistema com key "admin"
-  const roleKey = typeof user?.role === 'object' ? user.role?.key : undefined;
-  const isAdmin = user?.profile === 'admin' || roleKey === 'admin';
+  const isAdmin = isFullAdmin || user?.profile === 'admin';
   const canManageUsers = isAdmin || hasPermission('users.manage') || hasPermission('users.view');
   const canManageProjects = isAdmin || hasPermission('projects.manage') || hasPermission('projects.view') || hasPermission('projects.create');
   const canManageFunctions = isAdmin || hasPermission('functions.manage');

@@ -75,7 +75,7 @@ function PermissionRoute({
   anyPermission?: string[];
 }) {
   const { user, isAuthenticated, initialized } = useAuthStore();
-  const { hasPermission, hasAnyPermission, loading } = usePermissions();
+  const { hasPermission, hasAnyPermission, isFullAdmin, loading } = usePermissions();
 
   if (!initialized || loading) {
     return (
@@ -89,10 +89,7 @@ function PermissionRoute({
     return <Navigate to="/login" replace />;
   }
 
-  // Admin legado (profile) ou perfil de sistema Admin (role.key)
-  const roleKey = typeof user?.role === 'object' ? user.role?.key : undefined;
-  const isFullAdmin = user?.profile === 'admin' || roleKey === 'admin';
-  if (isFullAdmin) {
+  if (isFullAdmin || user?.profile === 'admin') {
     return <>{children}</>;
   }
 

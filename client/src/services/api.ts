@@ -46,6 +46,9 @@ export const authAPI = {
   
   getProfile: () =>
     api.get('/auth/profile'),
+
+  getMyPermissions: () =>
+    api.get<{ permissions: string[]; isFullAdmin: boolean; roleKey: string | null }>('/auth/permissions'),
   
   updatePassword: (currentPassword: string, newPassword: string) =>
     api.put('/auth/password', { currentPassword, newPassword }),

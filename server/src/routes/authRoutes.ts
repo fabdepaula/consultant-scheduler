@@ -11,6 +11,7 @@ router.post('/login', authController.login);
 
 // Profile
 router.get('/profile', authenticate, authController.getProfile);
+router.get('/permissions', authenticate, authController.getMyPermissions);
 router.put('/password', authenticate, authController.updatePassword);
 router.put('/force-change-password', authenticate, authController.forceChangePassword);
 

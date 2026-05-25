@@ -4,6 +4,9 @@ import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import { JwtPayload } from '../types/index.js';
 import { createLoginLog, updateLogoutLog } from './sessionLogController.js';
+import { getUserPermissions } from '../services/permissionService.js';
+import Permission from '../models/Permission.js';
+import Role from '../models/Role.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
@@ -114,6 +117,45 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         active: user.active,
         mustChangePassword: user.mustChangePassword,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMyPermissions = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({ message: 'Não autorizado' });
+    }
+
+    const userId = user._id.toString();
+
+    // Admin legado (profile admin, sem role)
+    if (!user.role && user.profile === 'admin') {
+      const allKeys = await Permission.find({ active: true }).distinct('key');
+      return res.json({
+        permissions: allKeys,
+        isFullAdmin: true,
+        roleKey: null,
+      });
+    }
+
+    const roleDoc = user.role
+      ? await Role.findById(user.role).select('key')
+      : null;
+
+    const isFullAdmin = roleDoc?.key === 'admin' || (!user.role && user.profile === 'admin');
+
+    const permissions = isFullAdmin
+      ? await Permission.find({ active: true }).distinct('key')
+      : await getUserPermissions(userId);
+
+    res.json({
+      permissions,
+      isFullAdmin: Boolean(isFullAdmin || user.profile === 'admin'),
+      roleKey: roleDoc?.key ?? null,
     });
   } catch (error) {
     next(error);
